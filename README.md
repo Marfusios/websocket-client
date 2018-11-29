@@ -1,7 +1,7 @@
 ![Logo](websocket-logo.png)
 # Websocket .NET client [![Build Status](https://travis-ci.org/Marfusios/websocket-client.svg?branch=master)](https://travis-ci.org/Marfusios/websocket-client) [![NuGet version](https://badge.fury.io/nu/Websocket.Client.svg)](https://badge.fury.io/nu/Websocket.Client)
 
-This is a wrapper over native C# class `ClientWebSocket`. Provides built-in reconnection and error handling. 
+This is a wrapper over native C# class `ClientWebSocket` with built-in reconnection and error handling. 
 
 ### License: 
     MIT
@@ -17,7 +17,7 @@ This is a wrapper over native C# class `ClientWebSocket`. Provides built-in reco
 
 ```csharp
 var exitEvent = new ManualResetEvent(false);
-var url = new Uri("wss://xxx);
+var url = new Uri("wss://xxx");
 
 using (var client = new WebsocketClient(url))
 {
@@ -46,9 +46,9 @@ More usage examples:
 
 There is a built-in reconnection which invokes after 1 minute (default) of not receiving any messages from the server. It is possible to configure that timeout via `client.ReconnectTimeoutMs`. Also, there is a stream `ReconnectionHappened` which sends information about a type of reconnection. However, if you are subscribed to low rate channels, it is very likely that you will encounter that timeout - higher the timeout to a few minutes or call `PingRequest` by your own every few seconds. 
 
-In the case of Bitmex outage, there is a built-in functionality which slows down reconnection requests (could be configured via `communicator.ErrorReconnectTimeoutMs`, the default is 1 minute).
+In the case of remote server outage, there is a built-in functionality which slows down reconnection requests (could be configured via `client.ErrorReconnectTimeoutMs`, the default is 1 minute).
 
-Beware that you **need to resubscribe to channels** after reconnection happens. You should subscribe to `Streams.InfoStream`, `Streams.AuthenticationStream` and send subscriptions requests (see [#12](https://github.com/Marfusios/bitfinex-client-websocket/issues/12) for example). 
+Beware that you **need to resubscribe to channels** after reconnection happens. You should subscribe to `ReconnectionHappened` stream and send subscriptions requests. 
 
 
 ### Multi-threading

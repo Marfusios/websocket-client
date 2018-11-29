@@ -1,0 +1,62 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2010
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{360B18BD-653A-4824-9261-C88167EEBAD2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0544BC01-B569-4729-86B0-5AFDBF7EED46}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test_integration", "test_integration", "{42E4078C-4FBE-4B03-B889-1573332945A9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B771F515-0677-409B-BEC1-B84BC88E7392}"
+	ProjectSection(SolutionItems) = preProject
+		.travis.yml = .travis.yml
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Websocket.Client", "src\Websocket.Client\Websocket.Client.csproj", "{FF449015-D8F9-4152-8E8A-2D870DF21A83}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Websocket.Client.Tests", "test\Websocket.Client.Tests\Websocket.Client.Tests.csproj", "{A34F25AA-365F-4709-A642-7B21743C91D7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Websocket.Client.Tests.Integration", "test_integration\Websocket.Client.Tests.Integration\Websocket.Client.Tests.Integration.csproj", "{FAFB1608-8DFF-4DDA-81D3-36385582DA07}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Websocket.Client.Sample", "test_integration\Websocket.Client.Sample\Websocket.Client.Sample.csproj", "{085B9246-446B-4F61-A6EF-0D8949CA546D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FF449015-D8F9-4152-8E8A-2D870DF21A83}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF449015-D8F9-4152-8E8A-2D870DF21A83}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF449015-D8F9-4152-8E8A-2D870DF21A83}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF449015-D8F9-4152-8E8A-2D870DF21A83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A34F25AA-365F-4709-A642-7B21743C91D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A34F25AA-365F-4709-A642-7B21743C91D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A34F25AA-365F-4709-A642-7B21743C91D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A34F25AA-365F-4709-A642-7B21743C91D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAFB1608-8DFF-4DDA-81D3-36385582DA07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAFB1608-8DFF-4DDA-81D3-36385582DA07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAFB1608-8DFF-4DDA-81D3-36385582DA07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAFB1608-8DFF-4DDA-81D3-36385582DA07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{085B9246-446B-4F61-A6EF-0D8949CA546D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{085B9246-446B-4F61-A6EF-0D8949CA546D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{085B9246-446B-4F61-A6EF-0D8949CA546D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{085B9246-446B-4F61-A6EF-0D8949CA546D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FF449015-D8F9-4152-8E8A-2D870DF21A83} = {360B18BD-653A-4824-9261-C88167EEBAD2}
+		{A34F25AA-365F-4709-A642-7B21743C91D7} = {0544BC01-B569-4729-86B0-5AFDBF7EED46}
+		{FAFB1608-8DFF-4DDA-81D3-36385582DA07} = {42E4078C-4FBE-4B03-B889-1573332945A9}
+		{085B9246-446B-4F61-A6EF-0D8949CA546D} = {42E4078C-4FBE-4B03-B889-1573332945A9}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EE3E0B94-CF20-4C22-B50B-E720E8DFD675}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Websocket.Client</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Mariusz Kotas</Authors>
+    <Description>Client for websocket API</Description>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>Initial release</PackageReleaseNotes>
+    <Copyright>Copyright 2018 Mariusz Kotas. All rights reserved.</Copyright>
+    <PackageTags>websockets websocket client</PackageTags>
+    <PackageLicenseUrl>https://github.com/Marfusios/Websocket.Client/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/Marfusios/Websocket.Client</PackageProjectUrl>
+    <PackageIconUrl>http://www.techbysample.com/wp-content/uploads/2017/03/websocket-1.png</PackageIconUrl>
+    <RepositoryUrl>https://github.com/Marfusios/Websocket.Client</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="2.7.1" />
+    <PackageReference Include="System.Reactive" Version="4.0.0" />
+  </ItemGroup>
+
+</Project>

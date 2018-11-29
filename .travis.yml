@@ -1,0 +1,17 @@
+language: csharp
+sudo: required
+dist: trusty
+mono: none
+dotnet: 2.0.0
+install:
+before_script:
+script:
+- dotnet build -c Release
+- dotnet test test/Websocket.Client.Tests -c Release
+deploy:
+  provider: script
+  skip_cleanup: true
+  script:
+    - cd src/Websocket.Client && dotnet pack /p:PackageVersion=1.0.$TRAVIS_BUILD_NUMBER -c Release && cd bin/Release && dotnet nuget push **/*.1.0.$TRAVIS_BUILD_NUMBER.nupkg -k $NUGET_API_KEY -s https://api.nuget.org/v3/index.json
+  on:
+    branch: master

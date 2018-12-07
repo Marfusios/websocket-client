@@ -109,7 +109,7 @@ namespace Websocket.Client
             _cancelation = new CancellationTokenSource();
             _cancelationTotal = new CancellationTokenSource();
 
-            await StartClient(_url, _cancelation.Token, ReconnectionType.Initial);
+            await StartClient(_url, _cancelation.Token, ReconnectionType.Initial).ConfigureAwait(false);
 
             StartBackgroundThreadForSending();
         }
@@ -152,7 +152,7 @@ namespace Websocket.Client
                 Log.Debug(L("Client not started, ignoring reconnection.."));
                 return;
             }
-            await Reconnect(ReconnectionType.ByUser);
+            await Reconnect(ReconnectionType.ByUser).ConfigureAwait(false);
         }
 
         private async Task SendFromQueue()
@@ -161,7 +161,7 @@ namespace Websocket.Client
             {
                 foreach (var message in _messagesToSendQueue.GetConsumingEnumerable(_cancelationTotal.Token))
                 {
-                    await SendInternal(message);
+                    await SendInternal(message).ConfigureAwait(false);
                 }
             }
             catch (TaskCanceledException)
@@ -193,8 +193,8 @@ namespace Websocket.Client
             Log.Verbose(L($"Sending:  {message}"));
             var buffer = Encoding.UTF8.GetBytes(message);
             var messageSegment = new ArraySegment<byte>(buffer);
-            var client = await GetClient();
-            await client.SendAsync(messageSegment, WebSocketMessageType.Text, true, _cancelation.Token);
+            var client = await GetClient().ConfigureAwait(false);
+            await client.SendAsync(messageSegment, WebSocketMessageType.Text, true, _cancelation.Token).ConfigureAwait(false);
         }
 
         private async Task StartClient(Uri uri, CancellationToken token, ReconnectionType type)
@@ -204,7 +204,7 @@ namespace Websocket.Client
             
             try
             {
-                await _client.ConnectAsync(uri, token);
+                await _client.ConnectAsync(uri, token).ConfigureAwait(false);
                 IsRunning = true;
                 _reconnectionSubject.OnNext(type);
 #pragma warning disable 4014
@@ -216,8 +216,8 @@ namespace Websocket.Client
             {
                 Log.Error(e, L("Exception while connecting. " +
                                $"Waiting {ErrorReconnectTimeoutMs/1000} sec before next reconnection try."));
-                await Task.Delay(ErrorReconnectTimeoutMs, token);
-                await Reconnect(ReconnectionType.Error);
+                await Task.Delay(ErrorReconnectTimeoutMs, token).ConfigureAwait(false);
+                await Reconnect(ReconnectionType.Error).ConfigureAwait(false);
             }       
         }
 
@@ -225,7 +225,7 @@ namespace Websocket.Client
         {
             if (_client == null || (_client.State != WebSocketState.Open && _client.State != WebSocketState.Connecting))
             {
-                await Reconnect(ReconnectionType.Lost);
+                await Reconnect(ReconnectionType.Lost).ConfigureAwait(false);
             }
             return _client;
         }
@@ -237,10 +237,10 @@ namespace Websocket.Client
                 return;
             Log.Debug(L("Reconnecting..."));
             _cancelation.Cancel();
-            await Task.Delay(1000);
+            await Task.Delay(1000).ConfigureAwait(false);
 
             _cancelation = new CancellationTokenSource();
-            await StartClient(_url, _cancelation.Token, type);
+            await StartClient(_url, _cancelation.Token, type).ConfigureAwait(false);
         }
 
         private async Task Listen(ClientWebSocket client, CancellationToken token)
@@ -255,7 +255,7 @@ namespace Websocket.Client
                     var resultMessage = new StringBuilder();
                     do
                     {
-                        result = await client.ReceiveAsync(message, token);
+                        result = await client.ReceiveAsync(message, token).ConfigureAwait(false);
                         var receivedMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
                         resultMessage.Append(receivedMessage);
                         if (result.MessageType != WebSocketMessageType.Text)

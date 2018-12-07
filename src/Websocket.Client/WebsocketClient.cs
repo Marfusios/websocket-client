@@ -10,6 +10,9 @@ using Serilog;
 
 namespace Websocket.Client
 {
+    /// <summary>
+    /// A simple websocket client with built-in reconnection and error handling
+    /// </summary>
     public class WebsocketClient : IWebsocketClient
     {
         private readonly Uri _url;
@@ -28,6 +31,7 @@ namespace Websocket.Client
 
         private readonly BlockingCollection<string> _messagesToSendQueue = new BlockingCollection<string>();
 
+        /// <inheritdoc />
         public WebsocketClient(Uri url, Func<ClientWebSocket> clientFactory = null)
         {
             Validations.Validations.ValidateInput(url, nameof(url));
@@ -92,12 +96,12 @@ namespace Websocket.Client
         /// <summary>
         /// Start listening to the websocket stream on the background thread
         /// </summary>
-        public Task Start()
+        public async Task Start()
         {
             if (IsStarted)
             {
                 Log.Debug(L("Client already started, ignoring.."));
-                return Task.CompletedTask;
+                return;
             }
             IsStarted = true;
 
@@ -105,9 +109,9 @@ namespace Websocket.Client
             _cancelation = new CancellationTokenSource();
             _cancelationTotal = new CancellationTokenSource();
 
-            Task.Factory.StartNew(_ => SendFromQueue(), TaskCreationOptions.LongRunning, _cancelationTotal.Token);
+            await StartClient(_url, _cancelation.Token, ReconnectionType.Initial);
 
-            return StartClient(_url, _cancelation.Token, ReconnectionType.Initial);
+            StartBackgroundThreadForSending();
         }
 
         /// <summary>
@@ -153,10 +157,35 @@ namespace Websocket.Client
 
         private async Task SendFromQueue()
         {
-            foreach (var message in _messagesToSendQueue.GetConsumingEnumerable(_cancelationTotal.Token))
+            try
             {
-                await SendInternal(message);
+                foreach (var message in _messagesToSendQueue.GetConsumingEnumerable(_cancelationTotal.Token))
+                {
+                    await SendInternal(message);
+                }
             }
+            catch (TaskCanceledException)
+            {
+                // task was canceled, ignore
+            }
+            catch (Exception e)
+            {
+                if (_cancelationTotal.IsCancellationRequested || _disposing)
+                {
+                    // disposing/canceling, do nothing and exit
+                    return;
+                }
+
+                StartBackgroundThreadForSending();
+            }
+
+        }
+
+        private void StartBackgroundThreadForSending()
+        {
+#pragma warning disable 4014
+            Task.Factory.StartNew(_ => SendFromQueue(), TaskCreationOptions.LongRunning, _cancelationTotal.Token);
+#pragma warning restore 4014
         }
 
         private async Task SendInternal(string message)

@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 
 namespace Websocket.Client
 {
+    /// <summary>
+    /// A simple websocket client with built-in reconnection and error handling
+    /// </summary>
     public interface IWebsocketClient : IDisposable
     {
         /// <summary>

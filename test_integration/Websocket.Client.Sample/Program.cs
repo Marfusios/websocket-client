@@ -38,10 +38,12 @@ namespace Websocket.Client.Sample
                 client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
                 client.ReconnectionHappened.Subscribe(type =>
                     Log.Information($"Reconnection happened, type: {type}"));
+                client.DisconnectionHappened.Subscribe(type => 
+                    Log.Warning($"Disconnection happened, type: {type}"));
 
                 client.MessageReceived.Subscribe(msg => Log.Information($"Message received: {msg}"));
 
-                client.Start();
+                client.Start().Wait();
 
                 Task.Run(() => StartSendingPing(client));
 

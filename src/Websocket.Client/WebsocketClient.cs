@@ -28,6 +28,7 @@ namespace Websocket.Client
 
         private readonly Subject<string> _messageReceivedSubject = new Subject<string>();
         private readonly Subject<ReconnectionType> _reconnectionSubject = new Subject<ReconnectionType>();
+        private readonly Subject<DisconnectionType> _disconnectedSubject = new Subject<DisconnectionType>();
 
         private readonly BlockingCollection<string> _messagesToSendQueue = new BlockingCollection<string>();
 
@@ -52,6 +53,11 @@ namespace Websocket.Client
         /// Stream for reconnection event (trigerred after the new connection) 
         /// </summary>
         public IObservable<ReconnectionType> ReconnectionHappened => _reconnectionSubject.AsObservable();
+
+        /// <summary>
+        /// Stream for disconnection event (trigerred after the connection was lost) 
+        /// </summary>
+        public IObservable<DisconnectionType> DisconnectionHappened => _disconnectedSubject.AsObservable();
 
         /// <summary>
         /// Time range in ms, how long to wait before reconnecting if no message comes from server.
@@ -82,15 +88,24 @@ namespace Websocket.Client
         {
             _disposing = true;
             Log.Debug(L("Disposing.."));
-            _lastChanceTimer?.Dispose();
-            _cancelation?.Cancel();
-            _cancelationTotal?.Cancel();
-            _client?.Abort();
-            _client?.Dispose();
-            _cancelation?.Dispose();
-            _cancelationTotal?.Dispose();
-            _messagesToSendQueue?.Dispose();
+            try
+            {
+                _lastChanceTimer?.Dispose();
+                _cancelation?.Cancel();
+                _cancelationTotal?.Cancel();
+                _client?.Abort();
+                _client?.Dispose();
+                _cancelation?.Dispose();
+                _cancelationTotal?.Dispose();
+                _messagesToSendQueue?.Dispose();
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, L($"Failed to dispose client, error: {e.Message}"));
+            }
+
             IsStarted = false;
+            _disconnectedSubject.OnNext(DisconnectionType.Exit);
         }
        
         /// <summary>
@@ -161,7 +176,14 @@ namespace Websocket.Client
             {
                 foreach (var message in _messagesToSendQueue.GetConsumingEnumerable(_cancelationTotal.Token))
                 {
-                    await SendInternal(message).ConfigureAwait(false);
+                    try
+                    {
+                        await SendInternal(message).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Error(L($"Failed to send message: '{message}'. Error: {e.Message}"));
+                    }
                 }
             }
             catch (TaskCanceledException)
@@ -214,6 +236,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
+                _disconnectedSubject.OnNext(DisconnectionType.Error);
                 Log.Error(e, L("Exception while connecting. " +
                                $"Waiting {ErrorReconnectTimeoutMs/1000} sec before next reconnection try."));
                 await Task.Delay(ErrorReconnectTimeoutMs, token).ConfigureAwait(false);
@@ -230,11 +253,14 @@ namespace Websocket.Client
             return _client;
         }
 
-        private async Task Reconnect( ReconnectionType type)
+        private async Task Reconnect(ReconnectionType type)
         {
             IsRunning = false;
             if (_disposing)
                 return;
+            if(type != ReconnectionType.Error)
+                _disconnectedSubject.OnNext(TranslateTypeToDisconnection(type));
+
             Log.Debug(L("Reconnecting..."));
             _cancelation.Cancel();
             await Task.Delay(1000).ConfigureAwait(false);
@@ -312,6 +338,12 @@ namespace Websocket.Client
         private string L(string msg)
         {
             return $"[WEBSOCKET CLIENT] {msg}";
+        }
+
+        private DisconnectionType TranslateTypeToDisconnection(ReconnectionType type)
+        {
+            // beaware enum indexes must correspond to each other
+            return (DisconnectionType) type;
         }
     }
 }

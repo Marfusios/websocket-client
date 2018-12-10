@@ -19,6 +19,11 @@ namespace Websocket.Client
         IObservable<ReconnectionType> ReconnectionHappened { get; }
 
         /// <summary>
+        /// Stream for disconnection event (trigerred after the connection was lost) 
+        /// </summary>
+        IObservable<DisconnectionType> DisconnectionHappened { get; }
+
+        /// <summary>
         /// Time range in ms, how long to wait before reconnecting if no message comes from server.
         /// Default 60000 ms (1 minute)
         /// </summary>

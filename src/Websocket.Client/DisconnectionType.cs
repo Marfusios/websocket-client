@@ -1,14 +1,14 @@
 ﻿namespace Websocket.Client
 {
     /// <summary>
-    /// Type that specify happenend reconnection
+    /// Type that specify happenend disconnection
     /// </summary>
-    public enum ReconnectionType
+    public enum DisconnectionType
     {
         /// <summary>
-        /// Type used for initial connection to websocket stream
+        /// Type used for exit event, disposing of the websocket client
         /// </summary>
-        Initial = 0,
+        Exit = 0,
 
         /// <summary>
         /// Type used when connection to websocket was lost in meantime
@@ -21,12 +21,12 @@
         NoMessageReceived = 2, 
 
         /// <summary>
-        /// Type used after unsuccessful previous reconnection
+        /// Type used when connection or reconnection returned error
         /// </summary>
         Error = 3,
 
         /// <summary>
-        /// Type used when reconnection was requested by user
+        /// Type used when disconnection was requested by user
         /// </summary>
         ByUser = 4
     }

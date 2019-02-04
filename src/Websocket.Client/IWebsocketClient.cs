@@ -36,6 +36,12 @@ namespace Websocket.Client
         int ErrorReconnectTimeoutMs { get; set; }
 
         /// <summary>
+        /// Get or set the name of the current websocket client instance.
+        /// For logging purpose (in case you use more parallel websocket clients and want to distinguish between them)
+        /// </summary>
+        string Name { get; set;}
+
+        /// <summary>
         /// Returns true if Start() method was called at least once. False if not started or disposed
         /// </summary>
         bool IsStarted { get; }

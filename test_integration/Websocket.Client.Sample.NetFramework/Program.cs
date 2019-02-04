@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
@@ -18,7 +17,6 @@ namespace Websocket.Client.Sample.NetFramework
             InitLogging();
 
             AppDomain.CurrentDomain.ProcessExit += CurrentDomainOnProcessExit;
-            AssemblyLoadContext.Default.Unloading += DefaultOnUnloading;
             Console.CancelKeyPress += ConsoleOnCancelKeyPress;
 
             Console.WriteLine("|=======================|");
@@ -35,9 +33,14 @@ namespace Websocket.Client.Sample.NetFramework
             var url = new Uri("wss://www.bitmex.com/realtime");
             using (var client = new WebsocketClient(url))
             {
+                client.Name = "Bitmex";
                 client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
                 client.ReconnectionHappened.Subscribe(type =>
                     Log.Information($"Reconnection happened, type: {type}"));
+                client.DisconnectionHappened.Subscribe(type => 
+                    Log.Warning($"Disconnection happened, type: {type}"));
+
+                client.MessageReceived.Subscribe(msg => Log.Information($"Message received: {msg}"));
 
                 client.Start();
 
@@ -75,12 +78,6 @@ namespace Websocket.Client.Sample.NetFramework
         private static void CurrentDomainOnProcessExit(object sender, EventArgs eventArgs)
         {
             Log.Warning("Exiting process");
-            ExitEvent.Set();
-        }
-
-        private static void DefaultOnUnloading(AssemblyLoadContext assemblyLoadContext)
-        {
-            Log.Warning("Unloading process");
             ExitEvent.Set();
         }
 

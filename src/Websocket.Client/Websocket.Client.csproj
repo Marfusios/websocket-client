@@ -3,11 +3,11 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Websocket.Client</PackageId>
-    <Version>1.0.0</Version>
+    <Version>2.0.0</Version>
     <Authors>Mariusz Kotas</Authors>
     <Description>Client for websocket API with built-in reconnection and error handling</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Initial release</PackageReleaseNotes>
+    <PackageReleaseNotes>Release of version 2.0</PackageReleaseNotes>
     <Copyright>Copyright 2018 Mariusz Kotas. All rights reserved.</Copyright>
     <PackageTags>websockets websocket client</PackageTags>
     <PackageLicenseUrl>https://github.com/Marfusios/Websocket.Client/blob/master/LICENSE</PackageLicenseUrl>
@@ -17,12 +17,15 @@
     <RepositoryType>Git</RepositoryType>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile> 
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Serilog" Version="2.7.1" />
+    <PackageReference Include="LibLog" Version="5.0.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="System.Reactive" Version="4.0.0" />
   </ItemGroup>
 

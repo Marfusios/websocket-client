@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Serilog;
 using Serilog.Events;
 
+
 namespace Websocket.Client.Sample
 {
     class Program
@@ -35,6 +36,7 @@ namespace Websocket.Client.Sample
             var url = new Uri("wss://www.bitmex.com/realtime");
             using (var client = new WebsocketClient(url))
             {
+                client.Name = "Bitmex";
                 client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
                 client.ReconnectionHappened.Subscribe(type =>
                     Log.Information($"Reconnection happened, type: {type}"));
@@ -72,7 +74,8 @@ namespace Websocket.Client.Sample
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-                .WriteTo.ColoredConsole(LogEventLevel.Verbose)
+                .WriteTo.ColoredConsole(LogEventLevel.Verbose, 
+                    outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message} {Properties}{NewLine}{Exception}")
                 .CreateLogger();
         }
 

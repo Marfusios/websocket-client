@@ -3,6 +3,8 @@
 
 This is a wrapper over native C# class `ClientWebSocket` with built-in reconnection and error handling. 
 
+[Releases and breaking changes](https://github.com/Marfusios/websocket-client/releases)
+
 ### License: 
     MIT
 

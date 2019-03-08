@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -28,7 +29,7 @@ namespace Websocket.Client
         private CancellationTokenSource _cancellation;
         private CancellationTokenSource _cancellationTotal;
 
-        private readonly Subject<string> _messageReceivedSubject = new Subject<string>();
+        private readonly Subject<MessageType> _messageReceivedSubject = new Subject<MessageType>();
         private readonly Subject<ReconnectionType> _reconnectionSubject = new Subject<ReconnectionType>();
         private readonly Subject<DisconnectionType> _disconnectedSubject = new Subject<DisconnectionType>();
 
@@ -49,7 +50,7 @@ namespace Websocket.Client
         /// <summary>
         /// Stream with received message (raw format)
         /// </summary>
-        public IObservable<string> MessageReceived => _messageReceivedSubject.AsObservable();
+        public IObservable<MessageType> MessageReceived => _messageReceivedSubject.AsObservable();
 
         /// <summary>
         /// Stream for reconnection event (triggered after the new connection) 
@@ -164,6 +165,11 @@ namespace Websocket.Client
             return SendInternal(message);
         }
 
+        public Task SendInstant(byte[] message)
+        {
+            return SendInternal(message);
+        }
+
         /// <summary>
         /// Force reconnection. 
         /// Closes current websocket stream and perform a new connection to the server.
@@ -227,6 +233,14 @@ namespace Websocket.Client
             await client.SendAsync(messageSegment, WebSocketMessageType.Text, true, _cancellation.Token).ConfigureAwait(false);
         }
 
+        private async Task SendInternal(byte[] message)
+        {
+            var client = await GetClient().ConfigureAwait(false);
+            await client
+                .SendAsync(new ArraySegment<byte>(message), WebSocketMessageType.Binary, true, _cancellation.Token)
+                .ConfigureAwait(false);
+        }
+
         private async Task StartClient(Uri uri, CancellationToken token, ReconnectionType type)
         {
             DeactivateLastChance();
@@ -283,24 +297,34 @@ namespace Websocket.Client
             {
                 do
                 {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[8192]);
+
                     WebSocketReceiveResult result = null;
-                    var buffer = new byte[1000];
-                    var message = new ArraySegment<byte>(buffer);
-                    var resultMessage = new StringBuilder();
-                    do
+
+                    using (var ms = new MemoryStream())
                     {
-                        result = await client.ReceiveAsync(message, token).ConfigureAwait(false);
-                        var receivedMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                        resultMessage.Append(receivedMessage);
-                        if (result.MessageType != WebSocketMessageType.Text)
-                            break;
+                        do
+                        {
+                            result = await _client.ReceiveAsync(buffer, CancellationToken.None);
+                            ms.Write(buffer.Array, buffer.Offset, result.Count);
+                        } while (!result.EndOfMessage);
 
-                    } while (!result.EndOfMessage);
+                        ms.Seek(0, SeekOrigin.Begin);
 
-                    var received = resultMessage.ToString();
-                    Logger.Trace(L($"Received:  {received}"));
-                    _lastReceivedMsg = DateTime.UtcNow;
-                    _messageReceivedSubject.OnNext(received);
+                        var message = new MessageType();
+                        message.WebSocketMessageType = result.MessageType;
+                        if (result.MessageType == WebSocketMessageType.Text)
+                        {
+                            message.Data = Encoding.UTF8.GetString(ms.ToArray());
+                        }
+                        else
+                        {
+                            message.RawData = ms.ToArray();
+                        }
+                        Logger.Trace(L($"Received:  {message}"));
+                        _lastReceivedMsg = DateTime.UtcNow;
+                        _messageReceivedSubject.OnNext(message);
+                    }
 
                 } while (client.State == WebSocketState.Open && !token.IsCancellationRequested);
             }

@@ -1,7 +1,7 @@
 ﻿namespace Websocket.Client
 {
     /// <summary>
-    /// Type that specify happenend reconnection
+    /// Type that specify happened reconnection
     /// </summary>
     public enum ReconnectionType
     {
@@ -16,7 +16,7 @@
         Lost = 1,
 
         /// <summary>
-        /// Type used when connection to websocket was lost by not receiving any message in given timerange
+        /// Type used when connection to websocket was lost by not receiving any message in given time-range
         /// </summary>
         NoMessageReceived = 2, 
 

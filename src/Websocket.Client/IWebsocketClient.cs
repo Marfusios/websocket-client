@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Websocket.Client
@@ -11,14 +12,14 @@ namespace Websocket.Client
         /// <summary>
         /// Stream with received message (raw format)
         /// </summary>
-        IObservable<MessageType> MessageReceived { get; }
+        IObservable<ResponseMessage> MessageReceived { get; }
             /// <summary>
-        /// Stream for reconnection event (trigerred after the new connection) 
+        /// Stream for reconnection event (triggered after the new connection) 
         /// </summary>
         IObservable<ReconnectionType> ReconnectionHappened { get; }
 
         /// <summary>
-        /// Stream for disconnection event (trigerred after the connection was lost) 
+        /// Stream for disconnection event (triggered after the connection was lost) 
         /// </summary>
         IObservable<DisconnectionType> DisconnectionHappened { get; }
 
@@ -49,6 +50,12 @@ namespace Websocket.Client
         /// Returns true if client is running and connected to the server
         /// </summary>
         bool IsRunning { get; }
+
+        /// <summary>
+        /// Sets used encoding for sending and receiving text messages.
+        /// Default is UTF8
+        /// </summary>
+        Encoding MessageEncoding { get; set; }
 
         /// <summary>
         /// Start listening to the websocket stream on the background thread

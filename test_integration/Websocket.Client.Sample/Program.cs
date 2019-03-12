@@ -75,7 +75,7 @@ namespace Websocket.Client.Sample
                 .MinimumLevel.Verbose()
                 .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
                 .WriteTo.ColoredConsole(LogEventLevel.Verbose, 
-                    outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message} {Properties}{NewLine}{Exception}")
+                    outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message} {NewLine}{Exception}")
                 .CreateLogger();
         }
 

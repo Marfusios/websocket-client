@@ -19,7 +19,7 @@ namespace Websocket.Client.Tests.Integration
 
                 client.MessageReceived.Subscribe(msg =>
                 {
-                    received = msg;
+                    received = msg.Data;
                     receivedEvent.Set();
                 });
 
@@ -48,11 +48,11 @@ namespace Websocket.Client.Tests.Integration
 
                 client
                     .MessageReceived
-                    .Where(x => x.ToLower().Contains("pong"))
+                    .Where(x => x.Data.ToLower().Contains("pong"))
                     .Subscribe(msg =>
                     {
                         receivedCount++;
-                        received = msg;
+                        received = msg.Data;
 
                         if(receivedCount >= 7)
                             receivedEvent.Set();

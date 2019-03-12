@@ -11,9 +11,8 @@ namespace Websocket.Client
         /// <summary>
         /// Stream with received message (raw format)
         /// </summary>
-        IObservable<string> MessageReceived { get; }
-
-        /// <summary>
+        IObservable<MessageType> MessageReceived { get; }
+            /// <summary>
         /// Stream for reconnection event (trigerred after the new connection) 
         /// </summary>
         IObservable<ReconnectionType> ReconnectionHappened { get; }

@@ -29,11 +29,12 @@ namespace Websocket.Client
         private CancellationTokenSource _cancellation;
         private CancellationTokenSource _cancellationTotal;
 
-        private readonly Subject<MessageType> _messageReceivedSubject = new Subject<MessageType>();
+        private readonly Subject<ResponseMessage> _messageReceivedSubject = new Subject<ResponseMessage>();
         private readonly Subject<ReconnectionType> _reconnectionSubject = new Subject<ReconnectionType>();
         private readonly Subject<DisconnectionType> _disconnectedSubject = new Subject<DisconnectionType>();
 
-        private readonly BlockingCollection<string> _messagesToSendQueue = new BlockingCollection<string>();
+        private readonly BlockingCollection<string> _messagesTextToSendQueue = new BlockingCollection<string>();
+        private readonly BlockingCollection<byte[]> _messagesBinaryToSendQueue = new BlockingCollection<byte[]>();
 
         /// <inheritdoc />
         public WebsocketClient(Uri url, Func<ClientWebSocket> clientFactory = null)
@@ -50,7 +51,7 @@ namespace Websocket.Client
         /// <summary>
         /// Stream with received message (raw format)
         /// </summary>
-        public IObservable<MessageType> MessageReceived => _messageReceivedSubject.AsObservable();
+        public IObservable<ResponseMessage> MessageReceived => _messageReceivedSubject.AsObservable();
 
         /// <summary>
         /// Stream for reconnection event (triggered after the new connection) 
@@ -90,6 +91,9 @@ namespace Websocket.Client
         /// </summary>
         public bool IsRunning { get; private set; }
 
+        /// <inheritdoc />
+        public Encoding MessageEncoding { get; set; }
+
         /// <summary>
         /// Terminate the websocket connection and cleanup everything
         /// </summary>
@@ -106,7 +110,7 @@ namespace Websocket.Client
                 _client?.Dispose();
                 _cancellation?.Dispose();
                 _cancellationTotal?.Dispose();
-                _messagesToSendQueue?.Dispose();
+                _messagesTextToSendQueue?.Dispose();
             }
             catch (Exception e)
             {
@@ -135,24 +139,38 @@ namespace Websocket.Client
 
             await StartClient(_url, _cancellation.Token, ReconnectionType.Initial).ConfigureAwait(false);
 
-            StartBackgroundThreadForSending();
+            StartBackgroundThreadForSendingText();
+            StartBackgroundThreadForSendingBinary();
         }
 
         /// <summary>
-        /// Send message to the websocket channel. 
+        /// Send text message to the websocket channel. 
         /// It inserts the message to the queue and actual sending is done on an other thread
         /// </summary>
-        /// <param name="message">Message to be sent</param>
+        /// <param name="message">Text message to be sent</param>
         public Task Send(string message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            _messagesToSendQueue.Add(message);
+            _messagesTextToSendQueue.Add(message);
             return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Send message to the websocket channel. 
+        /// Send binary message to the websocket channel. 
+        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// </summary>
+        /// <param name="message">Binary message to be sent</param>
+        public Task Send(byte[] message)
+        {
+            Validations.Validations.ValidateInput(message, nameof(message));
+
+            _messagesBinaryToSendQueue.Add(message);
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Send text message to the websocket channel. 
         /// It doesn't use a sending queue, 
         /// beware of issue while sending two messages in the exact same time 
         /// on the full .NET Framework platform
@@ -165,6 +183,13 @@ namespace Websocket.Client
             return SendInternal(message);
         }
 
+        /// <summary>
+        /// Send binary message to the websocket channel. 
+        /// It doesn't use a sending queue, 
+        /// beware of issue while sending two messages in the exact same time 
+        /// on the full .NET Framework platform
+        /// </summary>
+        /// <param name="message">Message to be sent</param>
         public Task SendInstant(byte[] message)
         {
             return SendInternal(message);
@@ -184,11 +209,11 @@ namespace Websocket.Client
             await Reconnect(ReconnectionType.ByUser).ConfigureAwait(false);
         }
 
-        private async Task SendFromQueue()
+        private async Task SendTextFromQueue()
         {
             try
             {
-                foreach (var message in _messagesToSendQueue.GetConsumingEnumerable(_cancellationTotal.Token))
+                foreach (var message in _messagesTextToSendQueue.GetConsumingEnumerable(_cancellationTotal.Token))
                 {
                     try
                     {
@@ -196,7 +221,7 @@ namespace Websocket.Client
                     }
                     catch (Exception e)
                     {
-                        Logger.Error(L($"Failed to send message: '{message}'. Error: {e.Message}"));
+                        Logger.Error(L($"Failed to send text message: '{message}'. Error: {e.Message}"));
                     }
                 }
             }
@@ -212,25 +237,69 @@ namespace Websocket.Client
                     return;
                 }
 
-                StartBackgroundThreadForSending();
+                Logger.Trace(L($"Sending text thread failed, error: {e.Message}. Creating a new sending thread."));
+                StartBackgroundThreadForSendingText();
             }
 
         }
 
-        private void StartBackgroundThreadForSending()
+        private async Task SendBinaryFromQueue()
+        {
+            try
+            {
+                foreach (var message in _messagesBinaryToSendQueue.GetConsumingEnumerable(_cancellationTotal.Token))
+                {
+                    try
+                    {
+                        await SendInternal(message).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(L($"Failed to send binary message: '{message}'. Error: {e.Message}"));
+                    }
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // task was canceled, ignore
+            }
+            catch (Exception e)
+            {
+                if (_cancellationTotal.IsCancellationRequested || _disposing)
+                {
+                    // disposing/canceling, do nothing and exit
+                    return;
+                }
+
+                Logger.Trace(L($"Sending binary thread failed, error: {e.Message}. Creating a new sending thread."));
+                StartBackgroundThreadForSendingBinary();
+            }
+
+        }
+
+        private void StartBackgroundThreadForSendingText()
         {
 #pragma warning disable 4014
-            Task.Factory.StartNew(_ => SendFromQueue(), TaskCreationOptions.LongRunning, _cancellationTotal.Token);
+            Task.Factory.StartNew(_ => SendTextFromQueue(), TaskCreationOptions.LongRunning, _cancellationTotal.Token);
+#pragma warning restore 4014
+        }
+
+        private void StartBackgroundThreadForSendingBinary()
+        {
+#pragma warning disable 4014
+            Task.Factory.StartNew(_ => SendBinaryFromQueue(), TaskCreationOptions.LongRunning, _cancellationTotal.Token);
 #pragma warning restore 4014
         }
 
         private async Task SendInternal(string message)
         {
             Logger.Trace(L($"Sending:  {message}"));
-            var buffer = Encoding.UTF8.GetBytes(message);
+            var buffer = GetEncoding().GetBytes(message);
             var messageSegment = new ArraySegment<byte>(buffer);
             var client = await GetClient().ConfigureAwait(false);
-            await client.SendAsync(messageSegment, WebSocketMessageType.Text, true, _cancellation.Token).ConfigureAwait(false);
+            await client
+                .SendAsync(messageSegment, WebSocketMessageType.Text, true, _cancellation.Token)
+                .ConfigureAwait(false);
         }
 
         private async Task SendInternal(byte[] message)
@@ -259,8 +328,8 @@ namespace Websocket.Client
             catch (Exception e)
             {
                 _disconnectedSubject.OnNext(DisconnectionType.Error);
-                Logger.Error(e, L("Exception while connecting. " +
-                               $"Waiting {ErrorReconnectTimeoutMs/1000} sec before next reconnection try."));
+                Logger.Error(e, L($"Exception while connecting. " +
+                                  $"Waiting {ErrorReconnectTimeoutMs/1000} sec before next reconnection try."));
                 await Task.Delay(ErrorReconnectTimeoutMs, token).ConfigureAwait(false);
                 await Reconnect(ReconnectionType.Error).ConfigureAwait(false);
             }       
@@ -297,30 +366,32 @@ namespace Websocket.Client
             {
                 do
                 {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[8192]);
-
-                    WebSocketReceiveResult result = null;
+                    var buffer = new ArraySegment<byte>(new byte[8192]);
 
                     using (var ms = new MemoryStream())
                     {
+                        WebSocketReceiveResult result;
                         do
                         {
-                            result = await _client.ReceiveAsync(buffer, CancellationToken.None);
-                            ms.Write(buffer.Array, buffer.Offset, result.Count);
+                            result = await _client.ReceiveAsync(buffer, token);
+                            if(buffer.Array != null)
+                                ms.Write(buffer.Array, buffer.Offset, result.Count);
                         } while (!result.EndOfMessage);
 
                         ms.Seek(0, SeekOrigin.Begin);
 
-                        var message = new MessageType();
-                        message.WebSocketMessageType = result.MessageType;
+                        ResponseMessage message;
                         if (result.MessageType == WebSocketMessageType.Text)
                         {
-                            message.Data = Encoding.UTF8.GetString(ms.ToArray());
+                            var data = GetEncoding().GetString(ms.ToArray());
+                            message = ResponseMessage.TextMessage(data);
                         }
                         else
                         {
-                            message.RawData = ms.ToArray();
+                            var data = ms.ToArray();
+                            message = ResponseMessage.BinaryMessage(data);
                         }
+
                         Logger.Trace(L($"Received:  {message}"));
                         _lastReceivedMsg = DateTime.UtcNow;
                         _messageReceivedSubject.OnNext(message);
@@ -365,6 +436,13 @@ namespace Websocket.Client
                 Reconnect(ReconnectionType.NoMessageReceived);
 #pragma warning restore 4014
             }
+        }
+
+        private Encoding GetEncoding()
+        {
+            if (MessageEncoding == null)
+                MessageEncoding = Encoding.UTF8;
+            return MessageEncoding;
         }
 
         private string L(string msg)

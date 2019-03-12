@@ -19,7 +19,7 @@ namespace Websocket.Client.Tests.Integration
 
                 client.MessageReceived.Subscribe(msg =>
                 {
-                    received = msg.Data;
+                    received = msg.Text;
                     receivedEvent.Set();
                 });
 
@@ -48,11 +48,11 @@ namespace Websocket.Client.Tests.Integration
 
                 client
                     .MessageReceived
-                    .Where(x => x.Data.ToLower().Contains("pong"))
+                    .Where(x => x.Text.ToLower().Contains("pong"))
                     .Subscribe(msg =>
                     {
                         receivedCount++;
-                        received = msg.Data;
+                        received = msg.Text;
 
                         if(receivedCount >= 7)
                             receivedEvent.Set();
@@ -63,6 +63,34 @@ namespace Websocket.Client.Tests.Integration
                 await client.Send("ping");
                 await client.Send("ping");
                 await client.Send("ping");
+
+                receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+
+                Assert.NotNull(received);
+            }
+        }
+
+        [Fact]
+        public async Task SendBinaryMessage_ShouldWork()
+        {
+            var url = new Uri("wss://www.bitmex.com/realtime");
+            using (var client = new WebsocketClient(url))
+            {
+                string received = null;
+                var receivedEvent = new ManualResetEvent(false);
+
+                client.MessageReceived.Subscribe(msg =>
+                {
+                    var msgText = msg.Text ?? string.Empty;
+                    if (msgText.Contains("Unrecognized request"))
+                    {
+                        received = msgText;
+                        receivedEvent.Set();
+                    }
+                });
+
+                await client.Start();
+                await client.Send(new byte[] {10, 14, 15, 16});
 
                 receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 

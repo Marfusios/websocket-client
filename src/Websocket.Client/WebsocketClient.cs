@@ -229,6 +229,10 @@ namespace Websocket.Client
             {
                 // task was canceled, ignore
             }
+            catch (OperationCanceledException)
+            {
+                // operation was canceled, ignore
+            }
             catch (Exception e)
             {
                 if (_cancellationTotal.IsCancellationRequested || _disposing)
@@ -262,6 +266,10 @@ namespace Websocket.Client
             catch (TaskCanceledException)
             {
                 // task was canceled, ignore
+            }
+            catch (OperationCanceledException)
+            {
+                // operation was canceled, ignore
             }
             catch (Exception e)
             {
@@ -402,6 +410,10 @@ namespace Websocket.Client
             catch (TaskCanceledException)
             {
                 // task was canceled, ignore
+            }
+            catch (OperationCanceledException)
+            {
+                // operation was canceled, ignore
             }
             catch (Exception e)
             {

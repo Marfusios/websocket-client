@@ -97,5 +97,22 @@ namespace Websocket.Client.Tests.Integration
                 Assert.NotNull(received);
             }
         }
+
+        [Fact]
+        public async Task Starting_MultipleTimes_ShouldWorkWithNoExceptions()
+        {
+            var url = new Uri("wss://www.bitmex.com/realtime");
+
+            for (int i = 0; i < 10; i++)
+            {
+                using (var client = new WebsocketClient(url))
+                {
+                    await client.Start();
+                    await Task.Delay(i * 20);
+                }
+            }
+
+            
+        }
     }
 }

@@ -39,7 +39,7 @@ namespace Websocket.Client.Sample
                 client.Name = "Bitmex";
                 client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
                 client.ReconnectionHappened.Subscribe(type =>
-                    Log.Information($"Reconnection happened, type: {type}"));
+                    Log.Information($"Reconnection happened, type: {type}, url: {client.Url}"));
                 client.DisconnectionHappened.Subscribe(type => 
                     Log.Warning($"Disconnection happened, type: {type}"));
 
@@ -48,6 +48,7 @@ namespace Websocket.Client.Sample
                 client.Start().Wait();
 
                 Task.Run(() => StartSendingPing(client));
+                Task.Run(() => SwitchUrl(client));
 
                 ExitEvent.WaitOne();
             }
@@ -64,6 +65,21 @@ namespace Websocket.Client.Sample
             {
                 await Task.Delay(1000);
                 await client.Send("ping");
+            }
+        }
+
+        private static async Task SwitchUrl(WebsocketClient client)
+        {
+            while (true)
+            {
+                await Task.Delay(10000);
+                
+                var production = new Uri("wss://www.bitmex.com/realtime");
+                var testnet = new Uri("wss://testnet.bitmex.com/realtime");
+
+                var selected = client.Url == production ? testnet : production;
+                client.Url = selected;
+                await client.Reconnect();
             }
         }
 

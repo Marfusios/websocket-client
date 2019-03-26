@@ -18,13 +18,14 @@ namespace Websocket.Client
     {
         private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
 
-        private readonly Uri _url;
+        private Uri _url;
         private Timer _lastChanceTimer;
         private readonly Func<ClientWebSocket> _clientFactory;
 
         private DateTime _lastReceivedMsg = DateTime.UtcNow; 
 
-        private bool _disposing = false;
+        private bool _disposing;
+        private bool _reconnecting;
         private ClientWebSocket _client;
         private CancellationTokenSource _cancellation;
         private CancellationTokenSource _cancellationTotal;
@@ -46,6 +47,17 @@ namespace Websocket.Client
             {
                 Options = {KeepAliveInterval = new TimeSpan(0, 0, 5, 0)}
             }); 
+        }
+
+        /// <inheritdoc />
+        public Uri Url
+        {
+            get => _url;
+            set
+            {
+                Validations.Validations.ValidateInput(value, nameof(Url));
+                _url = value;
+            }
         }
 
         /// <summary>
@@ -206,7 +218,17 @@ namespace Websocket.Client
                 Logger.Debug(L("Client not started, ignoring reconnection.."));
                 return;
             }
-            await Reconnect(ReconnectionType.ByUser).ConfigureAwait(false);
+
+            try
+            {
+                _reconnecting = true;
+                await Reconnect(ReconnectionType.ByUser).ConfigureAwait(false);
+
+            }
+            finally
+            {
+                _reconnecting = false;
+            }
         }
 
         private async Task SendTextFromQueue()
@@ -217,6 +239,12 @@ namespace Websocket.Client
                 {
                     try
                     {
+                        if (_reconnecting)
+                        {
+                            _messagesTextToSendQueue.Add(message);
+                            await Task.Delay(500);
+                            continue;
+                        }
                         await SendInternal(message).ConfigureAwait(false);
                     }
                     catch (Exception e)
@@ -255,6 +283,12 @@ namespace Websocket.Client
                 {
                     try
                     {
+                        if (_reconnecting)
+                        {
+                            _messagesBinaryToSendQueue.Add(message);
+                            await Task.Delay(500);
+                            continue;
+                        }
                         await SendInternal(message).ConfigureAwait(false);
                     }
                     catch (Exception e)

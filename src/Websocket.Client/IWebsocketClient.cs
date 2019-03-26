@@ -10,6 +10,11 @@ namespace Websocket.Client
     public interface IWebsocketClient : IDisposable
     {
         /// <summary>
+        /// Get or set target websocket url
+        /// </summary>
+        Uri Url { get; set; }
+
+        /// <summary>
         /// Stream with received message (raw format)
         /// </summary>
         IObservable<ResponseMessage> MessageReceived { get; }

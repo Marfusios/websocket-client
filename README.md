@@ -124,6 +124,61 @@ client
 // ----- ----- code2 ----- code2 code2 ----
 ```
 
+### Async/Await integration
+
+Using `async/await` in your subscribe methods is a bit tricky. Subscribe from Rx.NET doesn't `await` tasks, 
+so it won't block stream execution and cause sometimes undesired concurrency. For example: 
+
+```csharp
+client
+    .MessageReceived
+    .Subscribe(async msg => {
+        // do smth 1
+        await Task.Delay(5000); // waits 5 sec, could be HTTP call or something else
+        // do smth 2
+    });
+```
+
+That `await Task.Delay` won't block stream and subscribe method will be called multiple times concurrently. 
+If you want to buffer messages and process them one-by-one, then use this: 
+
+```csharp
+client
+    .MessageReceived
+    .Select(msg => Observable.FromAsync(async () => {
+        // do smth 1
+        await Task.Delay(5000); // waits 5 sec, could be HTTP call or something else
+        // do smth 2
+    }))
+    .Concat() // executes sequentially
+    .Subscribe();
+```
+
+If you want to process them concurrently (avoid synchronization), then use this
+
+```csharp
+client
+    .MessageReceived
+    .Select(msg => Observable.FromAsync(async () => {
+        // do smth 1
+        await Task.Delay(5000); // waits 5 sec, could be HTTP call or something else
+        // do smth 2
+    }))
+    .Merge() // executes concurrently
+    // .Merge(4) you can limit concurrency with a parameter
+    // .Merge(1) is same as .Concat() (sequentially)
+    // .Merge(0) is invalid (throws exception)
+    .Subscribe();
+```
+
+More info on [Github issue](https://github.com/dotnet/reactive/issues/459).
+
+Don't worry about websocket connection, those sequential execution via `.Concat()` or `.Merge(1)` has no effect on receiving messages. 
+It won't affect receiving thread, only buffers messages inside `MessageReceived` stream. 
+
+But beware of [producer-consumer problem](https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem) when the consumer will be too slow. Here is a [StackOverflow issue](https://stackoverflow.com/questions/11010602/with-rx-how-do-i-ignore-all-except-the-latest-value-when-my-subscribe-method-is/15876519#15876519) 
+with an example how to ignore/discard buffered messages and always process only the last one. 
+
 
 ### Available for help
 I do consulting, please don't hesitate to contact me if you have a custom solution you would like me to implement ([web](http://mkotas.cz/), 

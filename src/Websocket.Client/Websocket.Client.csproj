@@ -10,10 +10,10 @@
     <PackageReleaseNotes>Release of version 3.0</PackageReleaseNotes>
     <Copyright>Copyright 2018 Mariusz Kotas. All rights reserved.</Copyright>
     <PackageTags>websockets websocket client</PackageTags>
-    <PackageLicenseUrl>https://github.com/Marfusios/Websocket.Client/blob/master/LICENSE</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/Marfusios/Websocket.Client</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/Marfusios/websocket-client/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/Marfusios/websocket-client</PackageProjectUrl>
     <PackageIconUrl>http://www.techbysample.com/wp-content/uploads/2017/03/websocket-1.png</PackageIconUrl>
-    <RepositoryUrl>https://github.com/Marfusios/Websocket.Client</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Marfusios/websocket-client</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile> 

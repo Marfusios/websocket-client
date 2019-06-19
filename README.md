@@ -32,7 +32,7 @@ using (var client = new WebsocketClient(url))
 
     Task.Run(() => client.Send("{ message }"));
 
-    ExitEvent.WaitOne();
+    exitEvent.WaitOne();
 }
 ```
 

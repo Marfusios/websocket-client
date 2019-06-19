@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,14 +39,20 @@ namespace Websocket.Client
         private readonly BlockingCollection<byte[]> _messagesBinaryToSendQueue = new BlockingCollection<byte[]>();
 
         /// <inheritdoc />
-        public WebsocketClient(Uri url, Func<ClientWebSocket> clientFactory = null)
+        public WebsocketClient(Uri url, Func<ClientWebSocket> clientFactory = null, X509Certificate clientCertificate = null)
         {
             Validations.Validations.ValidateInput(url, nameof(url));
+
+            X509CertificateCollection certificateCollection = null;
+
+            certificateCollection = new X509CertificateCollection();
+            if (clientCertificate != null) certificateCollection.Add(clientCertificate);
 
             _url = url;
             _clientFactory = clientFactory ?? (() => new ClientWebSocket()
             {
-                Options = {KeepAliveInterval = new TimeSpan(0, 0, 5, 0)}
+                Options = {KeepAliveInterval = new TimeSpan(0, 0, 5, 0),
+                            ClientCertificates = certificateCollection}
             }); 
         }
 

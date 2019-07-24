@@ -199,6 +199,7 @@ namespace Websocket.Client
             }
                 
             await _client.CloseAsync(status, statusDescription, _cancellation?.Token ?? CancellationToken.None);
+            DeactivateLastChance();
             IsStarted = false;
             IsRunning = false;
             return true;

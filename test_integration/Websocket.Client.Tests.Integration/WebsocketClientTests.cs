@@ -173,11 +173,15 @@ namespace Websocket.Client.Tests.Integration
         {
             using (IWebsocketClient client = new WebsocketClient(WebsocketUrl))
             {
+                client.ReconnectTimeoutMs = 5 * 1000; // 5sec
+
                 string received = null;
+                var receivedCount = 0;
                 var receivedEvent = new ManualResetEvent(false);
 
                 client.MessageReceived.Subscribe(msg =>
                 {
+                    receivedCount++;
                     received = msg.Text;
                 });
 
@@ -196,12 +200,17 @@ namespace Websocket.Client.Tests.Integration
                 receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
                 Assert.NotNull(received);
+                Assert.Equal(1, receivedCount);
 
                 var nativeClient = client.NativeClient;
                 Assert.NotNull(nativeClient);
                 Assert.Equal(WebSocketState.Aborted, nativeClient.State);
                 Assert.Equal(WebSocketCloseStatus.InternalServerError, nativeClient.CloseStatus);
                 Assert.Equal("server error 500", nativeClient.CloseStatusDescription);
+
+                // check that reconnection is disabled
+                await Task.Delay(7000);
+                Assert.Equal(1, receivedCount);
             }
         }
     }

@@ -3,12 +3,12 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Websocket.Client</PackageId>
-    <Version>3.0.0</Version>
+    <Version>3.1.0</Version>
     <Authors>Mariusz Kotas</Authors>
     <Description>Client for websocket API with built-in reconnection and error handling</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReleaseNotes>Release of version 3.0</PackageReleaseNotes>
-    <Copyright>Copyright 2018 Mariusz Kotas. All rights reserved.</Copyright>
+    <Copyright>Copyright 2019 Mariusz Kotas. All rights reserved.</Copyright>
     <PackageTags>websockets websocket client</PackageTags>
     <PackageLicenseUrl>https://github.com/Marfusios/websocket-client/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/Marfusios/websocket-client</PackageProjectUrl>
@@ -17,8 +17,8 @@
     <RepositoryType>Git</RepositoryType>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile> 
-    <AssemblyVersion>3.0.0.0</AssemblyVersion>
-    <FileVersion>3.0.0.0</FileVersion>
+    <AssemblyVersion>3.1.0.0</AssemblyVersion>
+    <FileVersion>3.1.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -57,6 +58,17 @@ namespace Websocket.Client
         bool IsRunning { get; }
 
         /// <summary>
+        /// Enable or disable reconnection functionality (enabled by default)
+        /// </summary>
+        bool IsReconnectionEnabled { get; set; }
+
+        /// <summary>
+        /// Returns currently used native websocket client.
+        /// Use with caution, on every reconnection there will be a new instance. 
+        /// </summary>
+        ClientWebSocket NativeClient { get; }
+
+        /// <summary>
         /// Sets used encoding for sending and receiving text messages.
         /// Default is UTF8
         /// </summary>
@@ -68,11 +80,25 @@ namespace Websocket.Client
         Task Start();
 
         /// <summary>
+        /// Stop/close websocket connection with custom close code.
+        /// Method could throw exceptions. 
+        /// </summary>
+        /// <returns>Returns true if close was initiated successfully</returns>
+        Task<bool> Stop(WebSocketCloseStatus status, string statusDescription);
+
+        /// <summary>
         /// Send message to the websocket channel. 
         /// It inserts the message to the queue and actual sending is done on an other thread
         /// </summary>
         /// <param name="message">Message to be sent</param>
         Task Send(string message);
+
+        /// <summary>
+        /// Send binary message to the websocket channel. 
+        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// </summary>
+        /// <param name="message">Binary message to be sent</param>
+        Task Send(byte[] message);
 
         /// <summary>
         /// Send message to the websocket channel. 
@@ -82,6 +108,15 @@ namespace Websocket.Client
         /// </summary>
         /// <param name="message">Message to be sent</param>
         Task SendInstant(string message);
+
+        /// <summary>
+        /// Send binary message to the websocket channel. 
+        /// It doesn't use a sending queue, 
+        /// beware of issue while sending two messages in the exact same time 
+        /// on the full .NET Framework platform
+        /// </summary>
+        /// <param name="message">Message to be sent</param>
+        Task SendInstant(byte[] message);
 
         /// <summary>
         /// Force reconnection. 

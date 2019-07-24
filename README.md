@@ -44,6 +44,31 @@ More usage examples:
 
 **Pull Requests are welcome!**
 
+### Advanced configuration
+
+In order to set some advanced configuration, which are available on native `ClientWebSocket` class, 
+you have to provide factory method as second parameter to WebsocketClient. 
+That factory method will be called on every reconnection to get a new instance of the `ClientWebSocket`. 
+
+```csharp
+var factory = new Func<ClientWebSocket>(() => new ClientWebSocket
+{
+    Options =
+    {
+        KeepAliveInterval = TimeSpan.FromSeconds(5),
+        Proxy = ...
+        ClientCertificates = ...
+    }
+});
+
+var client = new WebsocketClient(url, factory);
+client.Start;
+```
+
+Also you can access current native class via `client.NativeClient`. 
+But use it with caution, on every reconnection there will be a new instance.
+
+
 ### Reconnecting
 
 There is a built-in reconnection which invokes after 1 minute (default) of not receiving any messages from the server. It is possible to configure that timeout via `client.ReconnectTimeoutMs`. Also, there is a stream `ReconnectionHappened` which sends information about a type of reconnection. However, if you are subscribed to low rate channels, it is very likely that you will encounter that timeout - higher the timeout to a few minutes or call `PingRequest` by your own every few seconds. 

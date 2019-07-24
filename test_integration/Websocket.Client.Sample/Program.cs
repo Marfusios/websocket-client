@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net.WebSockets;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
@@ -30,11 +31,19 @@ namespace Websocket.Client.Sample
             Log.Debug("====================================");
             Log.Debug("              STARTING              ");
             Log.Debug("====================================");
-           
 
+            var factory = new Func<ClientWebSocket>(() => new ClientWebSocket
+            {
+                Options =
+                {
+                    KeepAliveInterval = TimeSpan.FromSeconds(5),
+                    // Proxy = ...
+                    // ClientCertificates = ...
+                }
+            });
 
             var url = new Uri("wss://www.bitmex.com/realtime");
-            using (var client = new WebsocketClient(url))
+            using (IWebsocketClient client = new WebsocketClient(url, factory))
             {
                 client.Name = "Bitmex";
                 client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
@@ -59,7 +68,7 @@ namespace Websocket.Client.Sample
             Log.CloseAndFlush();
         }
 
-        private static async Task StartSendingPing(WebsocketClient client)
+        private static async Task StartSendingPing(IWebsocketClient client)
         {
             while (true)
             {
@@ -68,7 +77,7 @@ namespace Websocket.Client.Sample
             }
         }
 
-        private static async Task SwitchUrl(WebsocketClient client)
+        private static async Task SwitchUrl(IWebsocketClient client)
         {
             while (true)
             {

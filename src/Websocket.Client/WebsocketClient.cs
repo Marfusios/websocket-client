@@ -26,6 +26,7 @@ namespace Websocket.Client
 
         private bool _disposing;
         private bool _reconnecting;
+        private bool _isReconnectionEnabled = true;
         private ClientWebSocket _client;
         private CancellationTokenSource _cancellation;
         private CancellationTokenSource _cancellationTotal;
@@ -37,13 +38,18 @@ namespace Websocket.Client
         private readonly BlockingCollection<string> _messagesTextToSendQueue = new BlockingCollection<string>();
         private readonly BlockingCollection<byte[]> _messagesBinaryToSendQueue = new BlockingCollection<byte[]>();
 
-        /// <inheritdoc />
+
+        /// <summary>
+        /// A simple websocket client with built-in reconnection and error handling
+        /// </summary>
+        /// <param name="url">Target websocket url (wss://)</param>
+        /// <param name="clientFactory">Optional factory for native ClientWebSocket, use it whenever you need some custom features (proxy, settings, etc)</param>
         public WebsocketClient(Uri url, Func<ClientWebSocket> clientFactory = null)
         {
             Validations.Validations.ValidateInput(url, nameof(url));
 
             _url = url;
-            _clientFactory = clientFactory ?? (() => new ClientWebSocket()
+            _clientFactory = clientFactory ?? (() => new ClientWebSocket
             {
                 Options = {KeepAliveInterval = new TimeSpan(0, 0, 5, 0)}
             }); 
@@ -88,6 +94,30 @@ namespace Websocket.Client
         public int ErrorReconnectTimeoutMs { get; set; } = 60 * 1000;
 
         /// <summary>
+        /// Enable or disable reconnection functionality (enabled by default)
+        /// </summary>
+        public bool IsReconnectionEnabled
+        {
+            get => _isReconnectionEnabled;
+            set
+            {
+                _isReconnectionEnabled = value;
+
+                if (IsStarted)
+                {
+                    if (_isReconnectionEnabled)
+                    {
+                        ActivateLastChance();
+                    }
+                    else
+                    {
+                        DeactivateLastChance();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Get or set the name of the current websocket client instance.
         /// For logging purpose (in case you use more parallel websocket clients and want to distinguish between them)
         /// </summary>
@@ -105,6 +135,9 @@ namespace Websocket.Client
 
         /// <inheritdoc />
         public Encoding MessageEncoding { get; set; }
+
+        /// <inheritdoc />
+        public ClientWebSocket NativeClient => _client;
 
         /// <summary>
         /// Terminate the websocket connection and cleanup everything
@@ -153,6 +186,22 @@ namespace Websocket.Client
 
             StartBackgroundThreadForSendingText();
             StartBackgroundThreadForSendingBinary();
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> Stop(WebSocketCloseStatus status, string statusDescription)
+        {
+            if (_client == null)
+            {
+                IsStarted = false;
+                IsRunning = false;
+                return false;
+            }
+                
+            await _client.CloseAsync(status, statusDescription, _cancellation?.Token ?? CancellationToken.None);
+            IsStarted = false;
+            IsRunning = false;
+            return true;
         }
 
         /// <summary>
@@ -391,15 +440,26 @@ namespace Websocket.Client
             IsRunning = false;
             if (_disposing)
                 return;
+
+            _reconnecting = true;
             if(type != ReconnectionType.Error)
                 _disconnectedSubject.OnNext(TranslateTypeToDisconnection(type));
 
-            Logger.Debug(L("Reconnecting..."));
             _cancellation.Cancel();
             await Task.Delay(1000).ConfigureAwait(false);
 
+            if (!IsReconnectionEnabled)
+            {
+                // reconnection disabled, do nothing
+                IsStarted = false;
+                _reconnecting = false;
+                return;
+            }
+
+            Logger.Debug(L("Reconnecting..."));
             _cancellation = new CancellationTokenSource();
             await StartClient(_url, _cancellation.Token, type).ConfigureAwait(false);
+            _reconnecting = false;
         }
 
         private async Task Listen(ClientWebSocket client, CancellationToken token)
@@ -473,6 +533,13 @@ namespace Websocket.Client
             var diffMs = Math.Abs(DateTime.UtcNow.Subtract(_lastReceivedMsg).TotalMilliseconds);
             if (diffMs > timeoutMs)
             {
+                if (!IsReconnectionEnabled)
+                {
+                    // reconnection disabled, do nothing
+                    DeactivateLastChance();
+                    return;
+                }
+
                 Logger.Debug(L($"Last message received more than {timeoutMs:F} ms ago. Hard restart.."));
 
                 DeactivateLastChance();

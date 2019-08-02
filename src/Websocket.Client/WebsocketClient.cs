@@ -162,6 +162,7 @@ namespace Websocket.Client
                 Logger.Error(e, L($"Failed to dispose client, error: {e.Message}"));
             }
 
+            IsRunning = false;
             IsStarted = false;
             _disconnectedSubject.OnNext(DisconnectionType.Exit);
         }
@@ -446,6 +447,8 @@ namespace Websocket.Client
             if(type != ReconnectionType.Error)
                 _disconnectedSubject.OnNext(TranslateTypeToDisconnection(type));
 
+            _client?.Abort();
+            _client?.Dispose();
             _cancellation.Cancel();
             await Task.Delay(1000).ConfigureAwait(false);
 
@@ -512,7 +515,15 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                Logger.Error(e, L("Error while listening to websocket stream"));
+                Logger.Error(e, L($"Error while listening to websocket stream, error: '{e.Message}'"));
+
+                if (_disposing || _reconnecting)
+                    return;
+
+                // listening thread is lost, we have to reconnect
+#pragma warning disable 4014
+                Reconnect(ReconnectionType.Lost);
+#pragma warning restore 4014
             }
         }
 
@@ -544,8 +555,6 @@ namespace Websocket.Client
                 Logger.Debug(L($"Last message received more than {timeoutMs:F} ms ago. Hard restart.."));
 
                 DeactivateLastChance();
-                _client?.Abort();
-                _client?.Dispose();
 #pragma warning disable 4014
                 Reconnect(ReconnectionType.NoMessageReceived);
 #pragma warning restore 4014

@@ -415,7 +415,8 @@ namespace Websocket.Client
                 _reconnectionSubject.OnNext(type);
 #pragma warning disable 4014
                 Listen(_client, token);
-#pragma warning restore 4014               
+#pragma warning restore 4014
+                _lastReceivedMsg = DateTime.UtcNow;
                 ActivateLastChance();
             }
             catch (Exception e)

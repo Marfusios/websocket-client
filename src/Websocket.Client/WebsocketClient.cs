@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
@@ -16,7 +17,7 @@ namespace Websocket.Client
     /// </summary>
     public class WebsocketClient : IWebsocketClient
     {
-        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
+        private static readonly ILog Logger = GetLogger();
 
         private Uri _url;
         private Timer _lastChanceTimer;
@@ -573,6 +574,20 @@ namespace Websocket.Client
         {
             var name = Name ?? "CLIENT";
             return $"[WEBSOCKET {name}] {msg}";
+        }
+
+        private static ILog GetLogger()
+        {
+            try
+            {
+                return LogProvider.GetCurrentClassLogger();
+            }
+            catch (Exception e)
+            {
+                Trace.WriteLine($"[WEBSOCKET] Failed to initialize logger, disabling.. " +
+                                $"Error: {e}");
+                return LogProvider.NoOpLogger.Instance;
+            }
         }
 
         private DisconnectionType TranslateTypeToDisconnection(ReconnectionType type)

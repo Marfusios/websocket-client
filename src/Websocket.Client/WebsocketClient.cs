@@ -20,7 +20,7 @@ namespace Websocket.Client
     {
         private static readonly ILog Logger = GetLogger();
 
-        //private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();
+        private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();
         private Uri _url;
         private Timer _lastChanceTimer;
         private readonly Func<ClientWebSocket> _clientFactory;
@@ -292,12 +292,6 @@ namespace Websocket.Client
                 {
                     try
                     {
-                        //if (_reconnecting)
-                        //{
-                        //    _messagesTextToSendQueue.Add(message);
-                        //    await Task.Delay(500);
-                        //    continue;
-                        //}
                         await SendInternalSynchronized(message).ConfigureAwait(false);
                     }
                     catch (Exception e)
@@ -336,12 +330,6 @@ namespace Websocket.Client
                 {
                     try
                     {
-                        //if (_reconnecting)
-                        //{
-                        //    _messagesBinaryToSendQueue.Add(message);
-                        //    await Task.Delay(500);
-                        //    continue;
-                        //}
                         await SendInternalSynchronized(message).ConfigureAwait(false);
                     }
                     catch (Exception e)
@@ -388,10 +376,10 @@ namespace Websocket.Client
 
         private async Task SendInternalSynchronized(string message)
         {
-            //using (await _locker.LockAsync())
-            //{
+            using (await _locker.LockAsync())
+            {
                 await SendInternal(message);
-            //}
+            }
         }
 
         private async Task SendInternal(string message)
@@ -412,7 +400,7 @@ namespace Websocket.Client
 
         private async Task SendInternalSynchronized(byte[] message)
         {
-            //using(await _locker.LockAsync())
+            using(await _locker.LockAsync())
             {
                 await SendInternal(message);
             }
@@ -466,16 +454,16 @@ namespace Websocket.Client
 
         private async Task ReconnectSynchronized(ReconnectionType type)
         {
-            //using (await _locker.LockAsync())
-            //{
+            using (await _locker.LockAsync())
+            {
                 await Reconnect(type);
-            //}
+            }
         }
 
         private async Task Reconnect(ReconnectionType type)
         {
             IsRunning = false;
-            if (_disposing || _reconnecting)
+            if (_disposing)
                 return;
 
             _reconnecting = true;

@@ -43,13 +43,12 @@ namespace Websocket.Client.Sample
             });
 
             var url = new Uri("wss://www.bitmex.com/realtime");
-            var counter = 0;
 
             using (IWebsocketClient client = new WebsocketClient(url, factory))
             {
                 client.Name = "Bitmex";
-                client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(5).TotalMilliseconds;
-                client.ErrorReconnectTimeoutMs = (int)TimeSpan.FromSeconds(5).TotalMilliseconds;
+                client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
+                client.ErrorReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
                 client.ReconnectionHappened.Subscribe(async type =>
                 {
                     Log.Information($"Reconnection happened, type: {type}, url: {client.Url}");
@@ -59,23 +58,13 @@ namespace Websocket.Client.Sample
 
                 client.MessageReceived.Subscribe(msg =>
                 {
-                    //counter++;
                     Log.Information($"Message received: {msg}");
-
-                    //if(counter % 10 == 0)
-                    //{
-                    //    client.Reconnect();
-                    //    client.Reconnect();
-                    //    Task.Delay(1000).Wait();
-                    //    client.Reconnect();
-                    //    client.Reconnect();
-                    //}
                 });
 
                 client.Start().Wait();
 
-                //Task.Run(() => StartSendingPing(client));
-                //Task.Run(() => SwitchUrl(client));
+                Task.Run(() => StartSendingPing(client));
+                Task.Run(() => SwitchUrl(client));
 
                 ExitEvent.WaitOne();
             }
@@ -90,7 +79,7 @@ namespace Websocket.Client.Sample
         {
             while (true)
             {
-                await Task.Delay(100);
+                await Task.Delay(1000);
 
                 if(!client.IsRunning)
                     continue;

@@ -43,16 +43,23 @@ namespace Websocket.Client.Sample
             });
 
             var url = new Uri("wss://www.bitmex.com/realtime");
+
             using (IWebsocketClient client = new WebsocketClient(url, factory))
             {
                 client.Name = "Bitmex";
                 client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
-                client.ReconnectionHappened.Subscribe(type =>
-                    Log.Information($"Reconnection happened, type: {type}, url: {client.Url}"));
+                client.ErrorReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
+                client.ReconnectionHappened.Subscribe(async type =>
+                {
+                    Log.Information($"Reconnection happened, type: {type}, url: {client.Url}");
+                });
                 client.DisconnectionHappened.Subscribe(type => 
                     Log.Warning($"Disconnection happened, type: {type}"));
 
-                client.MessageReceived.Subscribe(msg => Log.Information($"Message received: {msg}"));
+                client.MessageReceived.Subscribe(msg =>
+                {
+                    Log.Information($"Message received: {msg}");
+                });
 
                 client.Start().Wait();
 
@@ -73,6 +80,10 @@ namespace Websocket.Client.Sample
             while (true)
             {
                 await Task.Delay(1000);
+
+                if(!client.IsRunning)
+                    continue;
+
                 await client.Send("ping");
             }
         }

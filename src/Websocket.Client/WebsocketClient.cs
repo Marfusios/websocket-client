@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Websocket.Client.Logging;
+using Websocket.Client.Threading;
 
 namespace Websocket.Client
 {
@@ -19,6 +20,7 @@ namespace Websocket.Client
     {
         private static readonly ILog Logger = GetLogger();
 
+        private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();
         private Uri _url;
         private Timer _lastChanceTimer;
         private readonly Func<ClientWebSocket> _clientFactory;
@@ -244,7 +246,7 @@ namespace Websocket.Client
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            return SendInternal(message);
+            return SendInternalSynchronized(message);
         }
 
         /// <summary>
@@ -256,7 +258,7 @@ namespace Websocket.Client
         /// <param name="message">Message to be sent</param>
         public Task SendInstant(byte[] message)
         {
-            return SendInternal(message);
+            return SendInternalSynchronized(message);
         }
 
         /// <summary>
@@ -273,8 +275,7 @@ namespace Websocket.Client
 
             try
             {
-                _reconnecting = true;
-                await Reconnect(ReconnectionType.ByUser).ConfigureAwait(false);
+                await ReconnectSynchronized(ReconnectionType.ByUser).ConfigureAwait(false);
 
             }
             finally
@@ -291,13 +292,7 @@ namespace Websocket.Client
                 {
                     try
                     {
-                        if (_reconnecting)
-                        {
-                            _messagesTextToSendQueue.Add(message);
-                            await Task.Delay(500);
-                            continue;
-                        }
-                        await SendInternal(message).ConfigureAwait(false);
+                        await SendInternalSynchronized(message).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -335,13 +330,7 @@ namespace Websocket.Client
                 {
                     try
                     {
-                        if (_reconnecting)
-                        {
-                            _messagesBinaryToSendQueue.Add(message);
-                            await Task.Delay(500);
-                            continue;
-                        }
-                        await SendInternal(message).ConfigureAwait(false);
+                        await SendInternalSynchronized(message).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -385,21 +374,49 @@ namespace Websocket.Client
 #pragma warning restore 4014
         }
 
+        private async Task SendInternalSynchronized(string message)
+        {
+            using (await _locker.LockAsync())
+            {
+                await SendInternal(message);
+            }
+        }
+
         private async Task SendInternal(string message)
         {
+            if (!IsClientConnected())
+            {
+                Logger.Debug(L($"Client is not connected to server, cannot send:  {message}"));
+                return;
+            }
+
             Logger.Trace(L($"Sending:  {message}"));
             var buffer = GetEncoding().GetBytes(message);
             var messageSegment = new ArraySegment<byte>(buffer);
-            var client = await GetClient().ConfigureAwait(false);
-            await client
+            await _client
                 .SendAsync(messageSegment, WebSocketMessageType.Text, true, _cancellation.Token)
                 .ConfigureAwait(false);
         }
 
+        private async Task SendInternalSynchronized(byte[] message)
+        {
+            using(await _locker.LockAsync())
+            {
+                await SendInternal(message);
+            }
+        }
+
         private async Task SendInternal(byte[] message)
         {
-            var client = await GetClient().ConfigureAwait(false);
-            await client
+            if (!IsClientConnected())
+            {
+                Logger.Debug(L($"Client is not connected to server, cannot send binary, length: {message.Length}"));
+                return;
+            }
+
+            Logger.Trace(L($"Sending binary, length: {message.Length}"));
+
+            await _client
                 .SendAsync(new ArraySegment<byte>(message), WebSocketMessageType.Binary, true, _cancellation.Token)
                 .ConfigureAwait(false);
         }
@@ -424,19 +441,23 @@ namespace Websocket.Client
             {
                 _disconnectedSubject.OnNext(DisconnectionType.Error);
                 Logger.Error(e, L($"Exception while connecting. " +
-                                  $"Waiting {ErrorReconnectTimeoutMs/1000} sec before next reconnection try."));
+                                  $"Waiting {ErrorReconnectTimeoutMs / 1000} sec before next reconnection try."));
                 await Task.Delay(ErrorReconnectTimeoutMs, token).ConfigureAwait(false);
                 await Reconnect(ReconnectionType.Error).ConfigureAwait(false);
             }       
         }
 
-        private async Task<ClientWebSocket> GetClient()
+        private bool IsClientConnected()
         {
-            if (_client == null || (_client.State != WebSocketState.Open && _client.State != WebSocketState.Connecting))
+            return _client.State == WebSocketState.Open;
+        }
+
+        private async Task ReconnectSynchronized(ReconnectionType type)
+        {
+            using (await _locker.LockAsync())
             {
-                await Reconnect(ReconnectionType.Lost).ConfigureAwait(false);
+                await Reconnect(type);
             }
-            return _client;
         }
 
         private async Task Reconnect(ReconnectionType type)
@@ -452,7 +473,6 @@ namespace Websocket.Client
             _client?.Abort();
             _client?.Dispose();
             _cancellation.Cancel();
-            await Task.Delay(1000).ConfigureAwait(false);
 
             if (!IsReconnectionEnabled)
             {
@@ -481,7 +501,7 @@ namespace Websocket.Client
                         WebSocketReceiveResult result;
                         do
                         {
-                            result = await _client.ReceiveAsync(buffer, token);
+                            result = await client.ReceiveAsync(buffer, token);
                             if(buffer.Array != null)
                                 ms.Write(buffer.Array, buffer.Offset, result.Count);
                         } while (!result.EndOfMessage);
@@ -524,7 +544,7 @@ namespace Websocket.Client
 
                 // listening thread is lost, we have to reconnect
 #pragma warning disable 4014
-                Reconnect(ReconnectionType.Lost);
+                ReconnectSynchronized(ReconnectionType.Lost);
 #pragma warning restore 4014
             }
         }
@@ -558,7 +578,7 @@ namespace Websocket.Client
 
                 DeactivateLastChance();
 #pragma warning disable 4014
-                Reconnect(ReconnectionType.NoMessageReceived);
+                ReconnectSynchronized(ReconnectionType.NoMessageReceived);
 #pragma warning restore 4014
             }
         }

@@ -23,14 +23,14 @@ namespace Websocket.Client
         private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();
         private Uri _url;
         private Timer _lastChanceTimer;
-        private readonly Func<ClientWebSocket> _clientFactory;
+        private readonly Func<WebSocket> _clientFactory;
 
         private DateTime _lastReceivedMsg = DateTime.UtcNow; 
 
         private bool _disposing;
         private bool _reconnecting;
         private bool _isReconnectionEnabled = true;
-        private ClientWebSocket _client;
+        private WebSocket _client;
         private CancellationTokenSource _cancellation;
         private CancellationTokenSource _cancellationTotal;
 
@@ -140,7 +140,7 @@ namespace Websocket.Client
         public Encoding MessageEncoding { get; set; }
 
         /// <inheritdoc />
-        public ClientWebSocket NativeClient => _client;
+        public WebSocket NativeClient => _client;
 
         /// <summary>
         /// Terminate the websocket connection and cleanup everything
@@ -424,11 +424,16 @@ namespace Websocket.Client
         private async Task StartClient(Uri uri, CancellationToken token, ReconnectionType type)
         {
             DeactivateLastChance();
-            _client = _clientFactory();
             
             try
             {
-                await _client.ConnectAsync(uri, token).ConfigureAwait(false);
+                _client = _clientFactory();
+
+                if (_client is ClientWebSocket clientSpecific)
+                {
+                    await clientSpecific.ConnectAsync(uri, token).ConfigureAwait(false);
+                }
+
                 IsRunning = true;
                 _reconnectionSubject.OnNext(type);
 #pragma warning disable 4014
@@ -488,7 +493,7 @@ namespace Websocket.Client
             _reconnecting = false;
         }
 
-        private async Task Listen(ClientWebSocket client, CancellationToken token)
+        private async Task Listen(WebSocket client, CancellationToken token)
         {
             try
             {

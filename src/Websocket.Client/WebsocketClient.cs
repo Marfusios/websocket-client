@@ -52,23 +52,11 @@ namespace Websocket.Client
 
         }
 
-        private static Func<Uri, CancellationToken, Task<WebSocket>> GetClientFactory(Func<ClientWebSocket> clientFactory)
-        {
-            if (clientFactory == null)
-                return null;
-
-            return (async (uri, token) => {
-                var client = clientFactory();
-                await client.ConnectAsync(uri, token).ConfigureAwait(false);
-                return client;
-            });
-        }
-
         /// <summary>
         /// A simple websocket client with built-in reconnection and error handling
         /// </summary>
         /// <param name="url">Target websocket url (wss://)</param>
-        /// <param name="connectionFactory">Optional factory for native ClientWebSocket, use it whenever you need some custom features (proxy, settings, etc)</param>
+        /// <param name="connectionFactory">Optional factory for native creating and connecting to a websocket. The method should return a <see cref="WebSocket"/> which is connected. Use it whenever you need some custom features (proxy, settings, etc)</param>
         public WebsocketClient(Uri url, Func<Uri, CancellationToken, Task<WebSocket>> connectionFactory)
         {
             Validations.Validations.ValidateInput(url, nameof(url));
@@ -167,7 +155,7 @@ namespace Websocket.Client
         public Encoding MessageEncoding { get; set; }
 
         /// <inheritdoc />
-        public WebSocket NativeClient => _client;
+        public ClientWebSocket NativeClient => _client as ClientWebSocket;
 
         /// <summary>
         /// Terminate the websocket connection and cleanup everything
@@ -309,6 +297,18 @@ namespace Websocket.Client
             {
                 _reconnecting = false;
             }
+        }
+
+        private static Func<Uri, CancellationToken, Task<WebSocket>> GetClientFactory(Func<ClientWebSocket> clientFactory)
+        {
+            if (clientFactory == null)
+                return null;
+
+            return (async (uri, token) => {
+                var client = clientFactory();
+                await client.ConnectAsync(uri, token).ConfigureAwait(false);
+                return client;
+            });
         }
 
         private async Task SendTextFromQueue()

@@ -21,24 +21,8 @@ namespace Websocket.Client.Tests
             _factory = new TestserverApplicationFactory<EchoTestServerStartup>();
         }
 
-        private IWebsocketClient CreateClient()
-        {
-            var httpClient = _factory.CreateClient(); // This is needed since _factory.Server would otherwise be null
-            var wsUri = new UriBuilder(_factory.Server.BaseAddress)
-            {
-                Scheme = "ws",
-                Path = "ws"
-            }.Uri;
-            return new WebsocketClient(wsUri,
-                async (uri, token) => 
-                { 
-                    var client = _factory.Server.CreateWebSocketClient();
-                    return await client.ConnectAsync(uri, token).ConfigureAwait(false);
-                });
-        }
-
         [Fact]
-        public async Task Recieves_Echo()
+        public async Task Receives_Echo()
         {
             using (IWebsocketClient client = CreateClient())
             {
@@ -67,8 +51,24 @@ namespace Websocket.Client.Tests
             }
         }
 
+        private IWebsocketClient CreateClient()
+        {
+            var httpClient = _factory.CreateClient(); // This is needed since _factory.Server would otherwise be null
+            var wsUri = new UriBuilder(_factory.Server.BaseAddress)
+            {
+                Scheme = "ws",
+                Path = "ws"
+            }.Uri;
+            return new WebsocketClient(wsUri,
+                async (uri, token) =>
+                {
+                    var client = _factory.Server.CreateWebSocketClient();
+                    return await client.ConnectAsync(uri, token).ConfigureAwait(false);
+                });
+        }
+
         // This is from https://github.com/aspnet/AspNetCore.Docs/blob/master/aspnetcore/fundamentals/websockets/samples/2.x/WebSocketsSample/Startup.cs
-        public class EchoTestServerStartup
+        private class EchoTestServerStartup
         {
             public void ConfigureServices(IServiceCollection services)
             {

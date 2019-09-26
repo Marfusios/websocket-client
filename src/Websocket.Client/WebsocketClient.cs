@@ -155,7 +155,7 @@ namespace Websocket.Client
         public Encoding MessageEncoding { get; set; }
 
         /// <inheritdoc />
-        public ClientWebSocket NativeClient => _client as ClientWebSocket;
+        public ClientWebSocket NativeClient => (ClientWebSocket) _client;
 
         /// <summary>
         /// Terminate the websocket connection and cleanup everything

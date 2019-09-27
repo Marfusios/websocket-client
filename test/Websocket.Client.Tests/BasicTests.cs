@@ -111,7 +111,7 @@ namespace Websocket.Client.Tests
         {
             using (var client = _context.CreateClient())
             {
-                client.ReconnectTimeoutMs = 3 * 1000; // 3sec
+                client.ReconnectTimeoutMs = 6 * 1000; // 6sec
 
                 string received = null;
                 var receivedCount = 0;
@@ -140,7 +140,7 @@ namespace Websocket.Client.Tests
                 receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
                 // check that reconnection is disabled
-                await Task.Delay(3000);
+                await Task.Delay(8000);
                 Assert.Equal(1, receivedCount);
             }
         }

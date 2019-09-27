@@ -3,17 +3,20 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.TestHost;
 
-namespace Websocket.Client.Tests.Testserver
+namespace Websocket.Client.Tests.TestServer
 {
-    public class TestserverApplicationFactory<T> : WebApplicationFactory<T>
-        where T : class
+    public class TestServerApplicationFactory<TStartup> : WebApplicationFactory<TStartup>
+        where TStartup : class
     {
-        protected override TestServer CreateServer(IWebHostBuilder builder) =>
+        protected override Microsoft.AspNetCore.TestHost.TestServer CreateServer(IWebHostBuilder builder) =>
             base.CreateServer(
                 builder.UseSolutionRelativeContentRoot(""));
 
         protected override IWebHostBuilder CreateWebHostBuilder() =>
             WebHost.CreateDefaultBuilder()
-                .UseStartup<T>();
+                .UseStartup<TStartup>();
+
+
+        
     }
 }

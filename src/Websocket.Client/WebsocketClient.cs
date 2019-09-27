@@ -8,6 +8,7 @@ using System.Reactive.Subjects;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Websocket.Client.Exceptions;
 using Websocket.Client.Logging;
 using Websocket.Client.Threading;
 
@@ -155,7 +156,7 @@ namespace Websocket.Client
         public Encoding MessageEncoding { get; set; }
 
         /// <inheritdoc />
-        public ClientWebSocket NativeClient => (ClientWebSocket) _client;
+        public ClientWebSocket NativeClient => GetSpecificOrThrow(_client);
 
         /// <summary>
         /// Terminate the websocket connection and cleanup everything
@@ -614,6 +615,17 @@ namespace Websocket.Client
             if (MessageEncoding == null)
                 MessageEncoding = Encoding.UTF8;
             return MessageEncoding;
+        }
+
+        private ClientWebSocket GetSpecificOrThrow(WebSocket client)
+        {
+            if (client == null)
+                return null;
+            var specific = client as ClientWebSocket;
+            if(specific == null)
+                throw new WebsocketException("Cannot cast 'WebSocket' client to 'ClientWebSocket', " +
+                                             "provide correct type via factory or don't use this property at all.");
+            return specific;
         }
 
         private string L(string msg)

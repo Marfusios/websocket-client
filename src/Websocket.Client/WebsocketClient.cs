@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
@@ -8,6 +8,7 @@ using System.Reactive.Subjects;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Websocket.Client.Exceptions;
 using Websocket.Client.Logging;
 using Websocket.Client.Threading;
 
@@ -23,14 +24,14 @@ namespace Websocket.Client
         private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();
         private Uri _url;
         private Timer _lastChanceTimer;
-        private readonly Func<ClientWebSocket> _clientFactory;
+        private readonly Func<Uri, CancellationToken, Task<WebSocket>> _connectionFactory;
 
         private DateTime _lastReceivedMsg = DateTime.UtcNow; 
 
         private bool _disposing;
         private bool _reconnecting;
         private bool _isReconnectionEnabled = true;
-        private ClientWebSocket _client;
+        private WebSocket _client;
         private CancellationTokenSource _cancellation;
         private CancellationTokenSource _cancellationTotal;
 
@@ -40,21 +41,36 @@ namespace Websocket.Client
 
         private readonly BlockingCollection<string> _messagesTextToSendQueue = new BlockingCollection<string>();
         private readonly BlockingCollection<byte[]> _messagesBinaryToSendQueue = new BlockingCollection<byte[]>();
-
-
+        
         /// <summary>
         /// A simple websocket client with built-in reconnection and error handling
         /// </summary>
         /// <param name="url">Target websocket url (wss://)</param>
         /// <param name="clientFactory">Optional factory for native ClientWebSocket, use it whenever you need some custom features (proxy, settings, etc)</param>
         public WebsocketClient(Uri url, Func<ClientWebSocket> clientFactory = null)
+            : this(url, GetClientFactory(clientFactory))
+        {
+
+        }
+
+        /// <summary>
+        /// A simple websocket client with built-in reconnection and error handling
+        /// </summary>
+        /// <param name="url">Target websocket url (wss://)</param>
+        /// <param name="connectionFactory">Optional factory for native creating and connecting to a websocket. The method should return a <see cref="WebSocket"/> which is connected. Use it whenever you need some custom features (proxy, settings, etc)</param>
+        public WebsocketClient(Uri url, Func<Uri, CancellationToken, Task<WebSocket>> connectionFactory)
         {
             Validations.Validations.ValidateInput(url, nameof(url));
 
             _url = url;
-            _clientFactory = clientFactory ?? (() => new ClientWebSocket
+            _connectionFactory = connectionFactory ?? (async (uri, token) =>
             {
-                Options = {KeepAliveInterval = new TimeSpan(0, 0, 5, 0)}
+                var client = new ClientWebSocket
+                {
+                    Options = { KeepAliveInterval = new TimeSpan(0, 0, 5, 0) }
+                };
+                await client.ConnectAsync(uri, token).ConfigureAwait(false);
+                return client;
             }); 
         }
 
@@ -140,7 +156,7 @@ namespace Websocket.Client
         public Encoding MessageEncoding { get; set; }
 
         /// <inheritdoc />
-        public ClientWebSocket NativeClient => _client;
+        public ClientWebSocket NativeClient => GetSpecificOrThrow(_client);
 
         /// <summary>
         /// Terminate the websocket connection and cleanup everything
@@ -201,8 +217,16 @@ namespace Websocket.Client
                 IsRunning = false;
                 return false;
             }
-                
-            await _client.CloseAsync(status, statusDescription, _cancellation?.Token ?? CancellationToken.None);
+
+            try
+            {
+                await _client.CloseAsync(status, statusDescription, _cancellation?.Token ?? CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(L($"Error while stopping client, message: '{e.Message}'"));
+            }
+            
             DeactivateLastChance();
             IsStarted = false;
             IsRunning = false;
@@ -282,6 +306,18 @@ namespace Websocket.Client
             {
                 _reconnecting = false;
             }
+        }
+
+        private static Func<Uri, CancellationToken, Task<WebSocket>> GetClientFactory(Func<ClientWebSocket> clientFactory)
+        {
+            if (clientFactory == null)
+                return null;
+
+            return (async (uri, token) => {
+                var client = clientFactory();
+                await client.ConnectAsync(uri, token).ConfigureAwait(false);
+                return client;
+            });
         }
 
         private async Task SendTextFromQueue()
@@ -424,11 +460,10 @@ namespace Websocket.Client
         private async Task StartClient(Uri uri, CancellationToken token, ReconnectionType type)
         {
             DeactivateLastChance();
-            _client = _clientFactory();
             
             try
             {
-                await _client.ConnectAsync(uri, token).ConfigureAwait(false);
+                _client = await _connectionFactory(uri, token).ConfigureAwait(false);
                 IsRunning = true;
                 _reconnectionSubject.OnNext(type);
 #pragma warning disable 4014
@@ -488,7 +523,7 @@ namespace Websocket.Client
             _reconnecting = false;
         }
 
-        private async Task Listen(ClientWebSocket client, CancellationToken token)
+        private async Task Listen(WebSocket client, CancellationToken token)
         {
             try
             {
@@ -588,6 +623,17 @@ namespace Websocket.Client
             if (MessageEncoding == null)
                 MessageEncoding = Encoding.UTF8;
             return MessageEncoding;
+        }
+
+        private ClientWebSocket GetSpecificOrThrow(WebSocket client)
+        {
+            if (client == null)
+                return null;
+            var specific = client as ClientWebSocket;
+            if(specific == null)
+                throw new WebsocketException("Cannot cast 'WebSocket' client to 'ClientWebSocket', " +
+                                             "provide correct type via factory or don't use this property at all.");
+            return specific;
         }
 
         private string L(string msg)

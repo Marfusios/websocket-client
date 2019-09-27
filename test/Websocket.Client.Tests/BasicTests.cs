@@ -111,7 +111,7 @@ namespace Websocket.Client.Tests
         {
             using (var client = _context.CreateClient())
             {
-                client.ReconnectTimeoutMs = 1 * 1000; // 1sec
+                client.ReconnectTimeoutMs = 3 * 1000; // 3sec
 
                 string received = null;
                 var receivedCount = 0;
@@ -131,7 +131,7 @@ namespace Websocket.Client.Tests
                 Task.Run(async () =>
 #pragma warning restore 4014
                 {
-                    await Task.Delay(2000);
+                    await Task.Delay(1000);
                     var success = await client.Stop(WebSocketCloseStatus.InternalServerError, "server error 500");
                     Assert.True(success);
                     receivedEvent.Set();

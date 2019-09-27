@@ -217,8 +217,16 @@ namespace Websocket.Client
                 IsRunning = false;
                 return false;
             }
-                
-            await _client.CloseAsync(status, statusDescription, _cancellation?.Token ?? CancellationToken.None);
+
+            try
+            {
+                await _client.CloseAsync(status, statusDescription, _cancellation?.Token ?? CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(L($"Error while stopping client, message: '{e.Message}'"));
+            }
+            
             DeactivateLastChance();
             IsStarted = false;
             IsRunning = false;

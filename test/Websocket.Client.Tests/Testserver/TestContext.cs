@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.AspNetCore.TestHost;
 
 namespace Websocket.Client.Tests.TestServer
 {
@@ -11,6 +12,8 @@ namespace Websocket.Client.Tests.TestServer
             _factory = new TestServerApplicationFactory<TStartup>();
         }
 
+        public WebSocketClient NativeTestClient { get; set; }
+
         public IWebsocketClient CreateClient()
         {
             var httpClient = _factory.CreateClient(); // This is needed since _factory.Server would otherwise be null
@@ -22,8 +25,8 @@ namespace Websocket.Client.Tests.TestServer
             return new WebsocketClient(wsUri,
                 async (uri, token) =>
                 {
-                    var client = _factory.Server.CreateWebSocketClient();
-                    return await client.ConnectAsync(uri, token).ConfigureAwait(false);
+                    NativeTestClient = _factory.Server.CreateWebSocketClient();
+                    return await NativeTestClient.ConnectAsync(uri, token).ConfigureAwait(false);
                 });
         }
     }

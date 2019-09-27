@@ -29,6 +29,8 @@ namespace Websocket.Client.Tests.TestServer
                     if (context.WebSockets.IsWebSocketRequest)
                     {
                         var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                        await SendResponse(webSocket,
+                            ResponseMessage.TextMessage($"Hello, you are connected to '{nameof(SimpleStartup)}'"));
                         await HandleRequest(webSocket, context);
                     }
                     else
@@ -50,12 +52,15 @@ namespace Websocket.Client.Tests.TestServer
                 var request = await ReadRequest(webSocket);
                 if(!request.active)
                 {
-                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "closed by client", CancellationToken.None);
+                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "closed by client", CancellationToken.None);
                     return;
                 }
 
                 if (request.message.MessageType == WebSocketMessageType.Text)
                     await HandleTextRequest(webSocket, context, request.message);
+
+                if (request.message.MessageType == WebSocketMessageType.Binary)
+                    await HandleBinaryRequest(webSocket, context, request.message);
             }
         }
 
@@ -72,6 +77,11 @@ namespace Websocket.Client.Tests.TestServer
             }
 
             throw new NotSupportedException($"Request: '{msg}' is not supported");
+        }
+
+        protected virtual Task HandleBinaryRequest(WebSocket webSocket, HttpContext context, ResponseMessage request)
+        {
+            return SendEcho(webSocket, request.Binary);
         }
 
         protected virtual async Task<(bool active, ResponseMessage message)> ReadRequest(WebSocket webSocket)
@@ -144,6 +154,11 @@ namespace Websocket.Client.Tests.TestServer
         {
             await Task.Delay(100);
             await SendResponse(webSocket, ResponseMessage.TextMessage(msg));
+        }
+
+        private async Task SendEcho(WebSocket webSocket, byte[] msg)
+        {
+            await SendResponse(webSocket, ResponseMessage.BinaryMessage(msg));
         }
     }
 }

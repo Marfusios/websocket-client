@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
@@ -23,7 +23,7 @@ namespace Websocket.Client
         private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();
         private Uri _url;
         private Timer _lastChanceTimer;
-        private readonly Func<WebSocket> _clientFactory;
+        private readonly Func<Uri, CancellationToken, Task<WebSocket>> _connectionFactory;
 
         private DateTime _lastReceivedMsg = DateTime.UtcNow; 
 
@@ -40,21 +40,36 @@ namespace Websocket.Client
 
         private readonly BlockingCollection<string> _messagesTextToSendQueue = new BlockingCollection<string>();
         private readonly BlockingCollection<byte[]> _messagesBinaryToSendQueue = new BlockingCollection<byte[]>();
-
-
+        
         /// <summary>
         /// A simple websocket client with built-in reconnection and error handling
         /// </summary>
         /// <param name="url">Target websocket url (wss://)</param>
         /// <param name="clientFactory">Optional factory for native ClientWebSocket, use it whenever you need some custom features (proxy, settings, etc)</param>
         public WebsocketClient(Uri url, Func<ClientWebSocket> clientFactory = null)
+            : this(url, GetClientFactory(clientFactory))
+        {
+
+        }
+
+        /// <summary>
+        /// A simple websocket client with built-in reconnection and error handling
+        /// </summary>
+        /// <param name="url">Target websocket url (wss://)</param>
+        /// <param name="connectionFactory">Optional factory for native creating and connecting to a websocket. The method should return a <see cref="WebSocket"/> which is connected. Use it whenever you need some custom features (proxy, settings, etc)</param>
+        public WebsocketClient(Uri url, Func<Uri, CancellationToken, Task<WebSocket>> connectionFactory)
         {
             Validations.Validations.ValidateInput(url, nameof(url));
 
             _url = url;
-            _clientFactory = clientFactory ?? (() => new ClientWebSocket
+            _connectionFactory = connectionFactory ?? (async (uri, token) =>
             {
-                Options = {KeepAliveInterval = new TimeSpan(0, 0, 5, 0)}
+                var client = new ClientWebSocket
+                {
+                    Options = { KeepAliveInterval = new TimeSpan(0, 0, 5, 0) }
+                };
+                await client.ConnectAsync(uri, token).ConfigureAwait(false);
+                return client;
             }); 
         }
 
@@ -140,7 +155,7 @@ namespace Websocket.Client
         public Encoding MessageEncoding { get; set; }
 
         /// <inheritdoc />
-        public WebSocket NativeClient => _client;
+        public ClientWebSocket NativeClient => (ClientWebSocket) _client;
 
         /// <summary>
         /// Terminate the websocket connection and cleanup everything
@@ -282,6 +297,18 @@ namespace Websocket.Client
             {
                 _reconnecting = false;
             }
+        }
+
+        private static Func<Uri, CancellationToken, Task<WebSocket>> GetClientFactory(Func<ClientWebSocket> clientFactory)
+        {
+            if (clientFactory == null)
+                return null;
+
+            return (async (uri, token) => {
+                var client = clientFactory();
+                await client.ConnectAsync(uri, token).ConfigureAwait(false);
+                return client;
+            });
         }
 
         private async Task SendTextFromQueue()
@@ -427,13 +454,7 @@ namespace Websocket.Client
             
             try
             {
-                _client = _clientFactory();
-
-                if (_client is ClientWebSocket clientSpecific)
-                {
-                    await clientSpecific.ConnectAsync(uri, token).ConfigureAwait(false);
-                }
-
+                _client = await _connectionFactory(uri, token).ConfigureAwait(false);
                 IsRunning = true;
                 _reconnectionSubject.OnNext(type);
 #pragma warning disable 4014

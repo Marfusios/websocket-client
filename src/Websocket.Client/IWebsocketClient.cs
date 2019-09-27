@@ -66,7 +66,7 @@ namespace Websocket.Client
         /// Returns currently used native websocket client.
         /// Use with caution, on every reconnection there will be a new instance. 
         /// </summary>
-        WebSocket NativeClient { get; }
+        ClientWebSocket NativeClient { get; }
 
         /// <summary>
         /// Sets used encoding for sending and receiving text messages.

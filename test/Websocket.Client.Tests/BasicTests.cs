@@ -6,16 +6,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using Websocket.Client.Tests.TestServer;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Websocket.Client.Tests
 {
     public class BasicTests
     {
         private readonly TestContext<SimpleStartup> _context;
+        private readonly ITestOutputHelper _output;
 
-        public BasicTests()
+        public BasicTests(ITestOutputHelper output)
         {
-            _context = new TestContext<SimpleStartup>();
+            _output = output;
+            _context = new TestContext<SimpleStartup>(_output);
         }
 
         [Fact]
@@ -31,10 +34,11 @@ namespace Websocket.Client.Tests
                     .MessageReceived
                     .Subscribe(msg =>
                     {
+                        _output.WriteLine($"Received: '{msg}'");
                         receivedCount++;
                         received = msg.Text;
 
-                        if(receivedCount >= 5)
+                        if(receivedCount >= 6)
                             receivedEvent.Set();
                     });
 
@@ -66,6 +70,7 @@ namespace Websocket.Client.Tests
                     .MessageReceived
                     .Subscribe(msg =>
                     {
+                        _output.WriteLine($"Received: '{msg}'");
                         receivedCount++;
                         received = msg.Text;
 
@@ -95,10 +100,20 @@ namespace Websocket.Client.Tests
             for (int i = 0; i < 5; i++)
             {
                 var client = _context.CreateClient();
+                client.Name = $"Client:{i}";
                 await client.Start();
                 await Task.Delay(i * 20);
                 clients.Add(client);
             }
+
+            foreach (var client in clients)
+            {
+#pragma warning disable 4014
+                client.Send("ping");
+#pragma warning restore 4014
+            }
+
+            await Task.Delay(1000);
 
             foreach (var client in clients)
             {
@@ -121,6 +136,7 @@ namespace Websocket.Client.Tests
                     .Where(x => x.MessageType == WebSocketMessageType.Text)
                     .Subscribe(msg =>
                 {
+                    _output.WriteLine($"Received: '{msg}'");
                     receivedCount++;
                     received = msg.Text;
                 });

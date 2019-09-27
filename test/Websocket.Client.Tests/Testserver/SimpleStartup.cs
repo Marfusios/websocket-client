@@ -50,9 +50,10 @@ namespace Websocket.Client.Tests.TestServer
             while(true)
             {
                 var request = await ReadRequest(webSocket);
-                if(!request.active)
+                var result = request.result;
+                if (result.CloseStatus.HasValue)
                 {
-                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "closed by client", CancellationToken.None);
+                    await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
                     return;
                 }
 
@@ -84,7 +85,7 @@ namespace Websocket.Client.Tests.TestServer
             return SendEcho(webSocket, request.Binary);
         }
 
-        protected virtual async Task<(bool active, ResponseMessage message)> ReadRequest(WebSocket webSocket)
+        protected virtual async Task<(WebSocketReceiveResult result, ResponseMessage message)> ReadRequest(WebSocket webSocket)
         {
             var buffer = new ArraySegment<byte>(new byte[8192]);
 
@@ -95,7 +96,7 @@ namespace Websocket.Client.Tests.TestServer
                 {
                     result = await webSocket.ReceiveAsync(buffer, CancellationToken.None);
                     if(result.CloseStatus.HasValue)
-                        return (false, null);
+                        return (result, null);
 
                     if (buffer.Array != null)
                         ms.Write(buffer.Array, buffer.Offset, result.Count);
@@ -115,7 +116,7 @@ namespace Websocket.Client.Tests.TestServer
                     message = ResponseMessage.BinaryMessage(data);
                 }
 
-                return (true, message);
+                return (result, message);
             }
         }
 

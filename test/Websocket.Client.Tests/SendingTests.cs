@@ -5,16 +5,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using Websocket.Client.Tests.TestServer;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Websocket.Client.Tests
 {
     public class SendingTests
     {
         private readonly TestContext<SimpleStartup> _context;
+        private readonly ITestOutputHelper _output;
 
-        public SendingTests()
+        public SendingTests(ITestOutputHelper output)
         {
-            _context = new TestContext<SimpleStartup>();
+            _output = output;
+            _context = new TestContext<SimpleStartup>(_output);
         }
 
         [Fact]

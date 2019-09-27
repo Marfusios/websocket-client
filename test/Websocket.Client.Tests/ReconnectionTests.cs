@@ -19,9 +19,34 @@ namespace Websocket.Client.Tests
         public ReconnectionTests(ITestOutputHelper output)
         {
             _output = output;
-            _context = new TestContext<SimpleStartup>();
+            _context = new TestContext<SimpleStartup>(_output);
         }
 
+        [Fact]
+        public async Task Reconnecting_ShouldWorkAsExpected()
+        {
+            using (var client = _context.CreateClient())
+            {
+                var receivedCount = 0;
+                var receivedEvent = new ManualResetEvent(false);
+
+                client.IsReconnectionEnabled = true;
+                client.ReconnectTimeoutMs = 3 * 1000; // 3sec
+
+                client.MessageReceived
+                    .Where(x => x.MessageType == WebSocketMessageType.Text)
+                    .Subscribe(msg =>
+                    {
+                        _output.WriteLine($"Received: '{msg}'");
+                        receivedCount++;
+                    });
+
+                await client.Start();
+                await Task.Delay(12000);
+
+                Assert.InRange(receivedCount, 2, 7);
+            }
+        }
 
         [Fact]
         public async Task DisabledReconnecting_ShouldWorkAsExpected()
@@ -35,7 +60,7 @@ namespace Websocket.Client.Tests
                 client.ReconnectTimeoutMs = 1 * 1000; // 1sec
 
                 client.MessageReceived
-                    .Where(x => x.MessageType ==WebSocketMessageType.Text)
+                    .Where(x => x.MessageType == WebSocketMessageType.Text)
                     .Subscribe(msg =>
                 {
                     _output.WriteLine($"Received: '{msg}'");
@@ -46,7 +71,7 @@ namespace Websocket.Client.Tests
 
                 await client.Start();
                 await Task.Delay(3000);
-                await client.Stop(WebSocketCloseStatus.Empty, string.Empty);
+                await client.Stop(WebSocketCloseStatus.InternalServerError, "something strange happened");
 
                 await Task.Delay(3000);
 

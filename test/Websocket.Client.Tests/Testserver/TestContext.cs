@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.TestHost;
+using Serilog;
+using Serilog.Events;
+using Xunit.Abstractions;
 
 namespace Websocket.Client.Tests.TestServer
 {
@@ -7,9 +11,10 @@ namespace Websocket.Client.Tests.TestServer
     {
         private readonly TestServerApplicationFactory<TStartup> _factory;
 
-        public TestContext()
+        public TestContext(ITestOutputHelper output)
         {
             _factory = new TestServerApplicationFactory<TStartup>();
+            InitLogging(output);
         }
 
         public WebSocketClient NativeTestClient { get; set; }
@@ -26,8 +31,18 @@ namespace Websocket.Client.Tests.TestServer
                 async (uri, token) =>
                 {
                     NativeTestClient = _factory.Server.CreateWebSocketClient();
-                    return await NativeTestClient.ConnectAsync(uri, token).ConfigureAwait(false);
+                    var ws = await NativeTestClient.ConnectAsync(uri, token).ConfigureAwait(false);
+                    await Task.Delay(1000, token);
+                    return ws;
                 });
+        }
+
+        private void InitLogging(ITestOutputHelper output)
+        {
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .WriteTo.TestOutput(output, LogEventLevel.Verbose)
+                .CreateLogger();
         }
     }
 }

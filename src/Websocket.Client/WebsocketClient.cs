@@ -30,6 +30,7 @@ namespace Websocket.Client
 
         private bool _disposing;
         private bool _reconnecting;
+        private bool _stopping;
         private bool _isReconnectionEnabled = true;
         private WebSocket _client;
         private CancellationTokenSource _cancellation;
@@ -220,6 +221,7 @@ namespace Websocket.Client
 
             try
             {
+                _stopping = true;
                 await _client.CloseAsync(status, statusDescription, _cancellation?.Token ?? CancellationToken.None);
             }
             catch (Exception e)
@@ -230,6 +232,7 @@ namespace Websocket.Client
             DeactivateLastChance();
             IsStarted = false;
             IsRunning = false;
+            _stopping = false;
             return true;
         }
 
@@ -574,7 +577,7 @@ namespace Websocket.Client
             {
                 Logger.Error(e, L($"Error while listening to websocket stream, error: '{e.Message}'"));
 
-                if (_disposing || _reconnecting)
+                if (_disposing || _reconnecting || _stopping || !IsStarted)
                     return;
 
                 // listening thread is lost, we have to reconnect
@@ -586,7 +589,7 @@ namespace Websocket.Client
 
         private void ActivateLastChance()
         {
-            var timerMs = 1000 * 5;
+            var timerMs = 1000 * 1;
             _lastChanceTimer = new Timer(LastChance, null, timerMs, timerMs);
         }
 

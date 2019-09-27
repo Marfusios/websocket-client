@@ -105,7 +105,7 @@ namespace Websocket.Client.Sample
 
         private static void InitLogging()
         {
-            var executingDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            var executingDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
             var logPath = Path.Combine(executingDir, "logs", "verbose.log");
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()

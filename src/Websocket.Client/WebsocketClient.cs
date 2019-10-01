@@ -573,6 +573,10 @@ namespace Websocket.Client
             {
                 // operation was canceled, ignore
             }
+            catch (ObjectDisposedException)
+            {
+                // client was disposed, ignore
+            }
             catch (Exception e)
             {
                 Logger.Error(e, L($"Error while listening to websocket stream, error: '{e.Message}'"));

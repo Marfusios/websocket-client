@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Websocket.Client.Tests.TestServer;
@@ -44,6 +42,7 @@ namespace Websocket.Client.Tests
                 await client.Start();
                 await Task.Delay(12000);
 
+                _output.WriteLine($"Reconnected {receivedCount} times");
                 Assert.InRange(receivedCount, 2, 7);
             }
         }

@@ -508,9 +508,9 @@ namespace Websocket.Client
             if(type != ReconnectionType.Error)
                 _disconnectedSubject.OnNext(TranslateTypeToDisconnection(type));
 
+            _cancellation.Cancel();
             _client?.Abort();
             _client?.Dispose();
-            _cancellation.Cancel();
 
             if (!IsReconnectionEnabled)
             {
@@ -580,15 +580,16 @@ namespace Websocket.Client
             catch (Exception e)
             {
                 Logger.Error(e, L($"Error while listening to websocket stream, error: '{e.Message}'"));
-
-                if (_disposing || _reconnecting || _stopping || !IsStarted)
-                    return;
-
-                // listening thread is lost, we have to reconnect
-#pragma warning disable 4014
-                ReconnectSynchronized(ReconnectionType.Lost);
-#pragma warning restore 4014
             }
+
+
+            if (_disposing || _reconnecting || _stopping || !IsStarted)
+                return;
+
+            // listening thread is lost, we have to reconnect
+#pragma warning disable 4014
+            ReconnectSynchronized(ReconnectionType.Lost);
+#pragma warning restore 4014
         }
 
         private void ActivateLastChance()

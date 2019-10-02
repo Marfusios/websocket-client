@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
@@ -17,7 +16,7 @@ namespace Websocket.Client
     /// <summary>
     /// A simple websocket client with built-in reconnection and error handling
     /// </summary>
-    public class WebsocketClient : IWebsocketClient
+    public partial class WebsocketClient : IWebsocketClient
     {
         private static readonly ILog Logger = GetLogger();
 
@@ -40,9 +39,6 @@ namespace Websocket.Client
         private readonly Subject<ReconnectionType> _reconnectionSubject = new Subject<ReconnectionType>();
         private readonly Subject<DisconnectionType> _disconnectedSubject = new Subject<DisconnectionType>();
 
-        private readonly BlockingCollection<string> _messagesTextToSendQueue = new BlockingCollection<string>();
-        private readonly BlockingCollection<byte[]> _messagesBinaryToSendQueue = new BlockingCollection<byte[]>();
-        
         /// <summary>
         /// A simple websocket client with built-in reconnection and error handling
         /// </summary>
@@ -176,6 +172,7 @@ namespace Websocket.Client
                 _cancellation?.Dispose();
                 _cancellationTotal?.Dispose();
                 _messagesTextToSendQueue?.Dispose();
+                _messagesBinaryToSendQueue?.Dispose();
             }
             catch (Exception e)
             {
@@ -236,81 +233,6 @@ namespace Websocket.Client
             return true;
         }
 
-        /// <summary>
-        /// Send text message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
-        /// </summary>
-        /// <param name="message">Text message to be sent</param>
-        public Task Send(string message)
-        {
-            Validations.Validations.ValidateInput(message, nameof(message));
-
-            _messagesTextToSendQueue.Add(message);
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Send binary message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
-        /// </summary>
-        /// <param name="message">Binary message to be sent</param>
-        public Task Send(byte[] message)
-        {
-            Validations.Validations.ValidateInput(message, nameof(message));
-
-            _messagesBinaryToSendQueue.Add(message);
-            return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Send text message to the websocket channel. 
-        /// It doesn't use a sending queue, 
-        /// beware of issue while sending two messages in the exact same time 
-        /// on the full .NET Framework platform
-        /// </summary>
-        /// <param name="message">Message to be sent</param>
-        public Task SendInstant(string message)
-        {
-            Validations.Validations.ValidateInput(message, nameof(message));
-
-            return SendInternalSynchronized(message);
-        }
-
-        /// <summary>
-        /// Send binary message to the websocket channel. 
-        /// It doesn't use a sending queue, 
-        /// beware of issue while sending two messages in the exact same time 
-        /// on the full .NET Framework platform
-        /// </summary>
-        /// <param name="message">Message to be sent</param>
-        public Task SendInstant(byte[] message)
-        {
-            return SendInternalSynchronized(message);
-        }
-
-        /// <summary>
-        /// Force reconnection. 
-        /// Closes current websocket stream and perform a new connection to the server.
-        /// </summary>
-        public async Task Reconnect()
-        {
-            if (!IsStarted)
-            {
-                Logger.Debug(L("Client not started, ignoring reconnection.."));
-                return;
-            }
-
-            try
-            {
-                await ReconnectSynchronized(ReconnectionType.ByUser).ConfigureAwait(false);
-
-            }
-            finally
-            {
-                _reconnecting = false;
-            }
-        }
-
         private static Func<Uri, CancellationToken, Task<WebSocket>> GetClientFactory(Func<ClientWebSocket> clientFactory)
         {
             if (clientFactory == null)
@@ -321,143 +243,6 @@ namespace Websocket.Client
                 await client.ConnectAsync(uri, token).ConfigureAwait(false);
                 return client;
             });
-        }
-
-        private async Task SendTextFromQueue()
-        {
-            try
-            {
-                foreach (var message in _messagesTextToSendQueue.GetConsumingEnumerable(_cancellationTotal.Token))
-                {
-                    try
-                    {
-                        await SendInternalSynchronized(message).ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(L($"Failed to send text message: '{message}'. Error: {e.Message}"));
-                    }
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                // task was canceled, ignore
-            }
-            catch (OperationCanceledException)
-            {
-                // operation was canceled, ignore
-            }
-            catch (Exception e)
-            {
-                if (_cancellationTotal.IsCancellationRequested || _disposing)
-                {
-                    // disposing/canceling, do nothing and exit
-                    return;
-                }
-
-                Logger.Trace(L($"Sending text thread failed, error: {e.Message}. Creating a new sending thread."));
-                StartBackgroundThreadForSendingText();
-            }
-
-        }
-
-        private async Task SendBinaryFromQueue()
-        {
-            try
-            {
-                foreach (var message in _messagesBinaryToSendQueue.GetConsumingEnumerable(_cancellationTotal.Token))
-                {
-                    try
-                    {
-                        await SendInternalSynchronized(message).ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(L($"Failed to send binary message: '{message}'. Error: {e.Message}"));
-                    }
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                // task was canceled, ignore
-            }
-            catch (OperationCanceledException)
-            {
-                // operation was canceled, ignore
-            }
-            catch (Exception e)
-            {
-                if (_cancellationTotal.IsCancellationRequested || _disposing)
-                {
-                    // disposing/canceling, do nothing and exit
-                    return;
-                }
-
-                Logger.Trace(L($"Sending binary thread failed, error: {e.Message}. Creating a new sending thread."));
-                StartBackgroundThreadForSendingBinary();
-            }
-
-        }
-
-        private void StartBackgroundThreadForSendingText()
-        {
-#pragma warning disable 4014
-            Task.Factory.StartNew(_ => SendTextFromQueue(), TaskCreationOptions.LongRunning, _cancellationTotal.Token);
-#pragma warning restore 4014
-        }
-
-        private void StartBackgroundThreadForSendingBinary()
-        {
-#pragma warning disable 4014
-            Task.Factory.StartNew(_ => SendBinaryFromQueue(), TaskCreationOptions.LongRunning, _cancellationTotal.Token);
-#pragma warning restore 4014
-        }
-
-        private async Task SendInternalSynchronized(string message)
-        {
-            using (await _locker.LockAsync())
-            {
-                await SendInternal(message);
-            }
-        }
-
-        private async Task SendInternal(string message)
-        {
-            if (!IsClientConnected())
-            {
-                Logger.Debug(L($"Client is not connected to server, cannot send:  {message}"));
-                return;
-            }
-
-            Logger.Trace(L($"Sending:  {message}"));
-            var buffer = GetEncoding().GetBytes(message);
-            var messageSegment = new ArraySegment<byte>(buffer);
-            await _client
-                .SendAsync(messageSegment, WebSocketMessageType.Text, true, _cancellation.Token)
-                .ConfigureAwait(false);
-        }
-
-        private async Task SendInternalSynchronized(byte[] message)
-        {
-            using(await _locker.LockAsync())
-            {
-                await SendInternal(message);
-            }
-        }
-
-        private async Task SendInternal(byte[] message)
-        {
-            if (!IsClientConnected())
-            {
-                Logger.Debug(L($"Client is not connected to server, cannot send binary, length: {message.Length}"));
-                return;
-            }
-
-            Logger.Trace(L($"Sending binary, length: {message.Length}"));
-
-            await _client
-                .SendAsync(new ArraySegment<byte>(message), WebSocketMessageType.Binary, true, _cancellation.Token)
-                .ConfigureAwait(false);
         }
 
         private async Task StartClient(Uri uri, CancellationToken token, ReconnectionType type)
@@ -488,42 +273,6 @@ namespace Websocket.Client
         private bool IsClientConnected()
         {
             return _client.State == WebSocketState.Open;
-        }
-
-        private async Task ReconnectSynchronized(ReconnectionType type)
-        {
-            using (await _locker.LockAsync())
-            {
-                await Reconnect(type);
-            }
-        }
-
-        private async Task Reconnect(ReconnectionType type)
-        {
-            IsRunning = false;
-            if (_disposing)
-                return;
-
-            _reconnecting = true;
-            if(type != ReconnectionType.Error)
-                _disconnectedSubject.OnNext(TranslateTypeToDisconnection(type));
-
-            _cancellation.Cancel();
-            _client?.Abort();
-            _client?.Dispose();
-
-            if (!IsReconnectionEnabled)
-            {
-                // reconnection disabled, do nothing
-                IsStarted = false;
-                _reconnecting = false;
-                return;
-            }
-
-            Logger.Debug(L("Reconnecting..."));
-            _cancellation = new CancellationTokenSource();
-            await StartClient(_url, _cancellation.Token, type).ConfigureAwait(false);
-            _reconnecting = false;
         }
 
         private async Task Listen(WebSocket client, CancellationToken token)
@@ -590,40 +339,6 @@ namespace Websocket.Client
 #pragma warning disable 4014
             ReconnectSynchronized(ReconnectionType.Lost);
 #pragma warning restore 4014
-        }
-
-        private void ActivateLastChance()
-        {
-            var timerMs = 1000 * 1;
-            _lastChanceTimer = new Timer(LastChance, null, timerMs, timerMs);
-        }
-
-        private void DeactivateLastChance()
-        {
-            _lastChanceTimer?.Dispose();
-            _lastChanceTimer = null;
-        }
-
-        private void LastChance(object state)
-        {
-            var timeoutMs = Math.Abs(ReconnectTimeoutMs);
-            var diffMs = Math.Abs(DateTime.UtcNow.Subtract(_lastReceivedMsg).TotalMilliseconds);
-            if (diffMs > timeoutMs)
-            {
-                if (!IsReconnectionEnabled)
-                {
-                    // reconnection disabled, do nothing
-                    DeactivateLastChance();
-                    return;
-                }
-
-                Logger.Debug(L($"Last message received more than {timeoutMs:F} ms ago. Hard restart.."));
-
-                DeactivateLastChance();
-#pragma warning disable 4014
-                ReconnectSynchronized(ReconnectionType.NoMessageReceived);
-#pragma warning restore 4014
-            }
         }
 
         private Encoding GetEncoding()

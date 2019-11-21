@@ -215,6 +215,8 @@ namespace Websocket.Client
                 IsRunning = false;
                 return false;
             }
+            
+            DeactivateLastChance();
 
             try
             {
@@ -225,8 +227,7 @@ namespace Websocket.Client
             {
                 Logger.Error(L($"Error while stopping client, message: '{e.Message}'"));
             }
-            
-            DeactivateLastChance();
+
             IsStarted = false;
             IsRunning = false;
             _stopping = false;

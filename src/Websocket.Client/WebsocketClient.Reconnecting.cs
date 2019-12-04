@@ -84,17 +84,16 @@ namespace Websocket.Client
 
         private void LastChance(object state)
         {
+            if (!IsReconnectionEnabled)
+            {
+                // reconnection disabled, do nothing
+                DeactivateLastChance();
+                return;
+            }
             var timeoutMs = Math.Abs(ReconnectTimeoutMs);
             var diffMs = Math.Abs(DateTime.UtcNow.Subtract(_lastReceivedMsg).TotalMilliseconds);
             if (diffMs > timeoutMs)
             {
-                if (!IsReconnectionEnabled)
-                {
-                    // reconnection disabled, do nothing
-                    DeactivateLastChance();
-                    return;
-                }
-
                 Logger.Debug(L($"Last message received more than {timeoutMs:F} ms ago. Hard restart.."));
 
                 DeactivateLastChance();

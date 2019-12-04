@@ -3,13 +3,23 @@ using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Serilog;
+using Serilog.Events;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Websocket.Client.Tests.Integration
 {
     public class WebsocketClientTests
     {
         private static readonly Uri WebsocketUrl = new Uri("wss://www.bitmex.com/realtime");
+        private readonly ITestOutputHelper _output;
+
+        public WebsocketClientTests(ITestOutputHelper output)
+        {
+            _output = output;
+            InitLogging(_output);
+        }
 
         [Fact]
         public async Task OnStarting_ShouldGetInfoResponse()
@@ -212,6 +222,15 @@ namespace Websocket.Client.Tests.Integration
                 await Task.Delay(7000);
                 Assert.Equal(1, receivedCount);
             }
+        }
+
+
+        private void InitLogging(ITestOutputHelper output)
+        {
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .WriteTo.TestOutput(output, LogEventLevel.Verbose)
+                .CreateLogger();
         }
     }
 }

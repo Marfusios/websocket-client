@@ -32,7 +32,7 @@ namespace Websocket.Client.Tests.TestServer
                 {
                     NativeTestClient = _factory.Server.CreateWebSocketClient();
                     var ws = await NativeTestClient.ConnectAsync(uri, token).ConfigureAwait(false);
-                    await Task.Delay(1000, token);
+                    //await Task.Delay(1000, token);
                     return ws;
                 });
         }

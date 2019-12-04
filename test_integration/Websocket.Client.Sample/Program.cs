@@ -32,14 +32,19 @@ namespace Websocket.Client.Sample
             Log.Debug("              STARTING              ");
             Log.Debug("====================================");
 
-            var factory = new Func<ClientWebSocket>(() => new ClientWebSocket
+            var factory = new Func<ClientWebSocket>(() =>
             {
-                Options =
+                var client = new ClientWebSocket
                 {
-                    KeepAliveInterval = TimeSpan.FromSeconds(5),
-                    // Proxy = ...
-                    // ClientCertificates = ...
-                }
+                    Options =
+                    {
+                        KeepAliveInterval = TimeSpan.FromSeconds(5),
+                        // Proxy = ...
+                        // ClientCertificates = ...
+                    }
+                };
+                //client.Options.SetRequestHeader("Origin", "xxx");
+                return client;
             });
 
             var url = new Uri("wss://www.bitmex.com/realtime");
@@ -61,7 +66,13 @@ namespace Websocket.Client.Sample
                     Log.Information($"Message received: {msg}");
                 });
 
+                client.DisconnectionHappened.Subscribe(type =>
+                    Log.Warning($"Disconnection happened, type: {type}")
+                    );
+
+                Log.Information("Starting...");
                 client.Start().Wait();
+                Log.Information("Started.");
 
                 Task.Run(() => StartSendingPing(client));
                 Task.Run(() => SwitchUrl(client));
@@ -92,7 +103,7 @@ namespace Websocket.Client.Sample
         {
             while (true)
             {
-                await Task.Delay(10000);
+                await Task.Delay(20000);
                 
                 var production = new Uri("wss://www.bitmex.com/realtime");
                 var testnet = new Uri("wss://testnet.bitmex.com/realtime");

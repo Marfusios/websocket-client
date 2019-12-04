@@ -90,6 +90,7 @@ namespace Websocket.Client
                 DeactivateLastChance();
                 return;
             }
+
             var timeoutMs = Math.Abs(ReconnectTimeoutMs);
             var diffMs = Math.Abs(DateTime.UtcNow.Subtract(_lastReceivedMsg).TotalMilliseconds);
             if (diffMs > timeoutMs)

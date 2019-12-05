@@ -45,7 +45,7 @@ namespace Websocket.Client.Tests
                 client.DisconnectionHappened.Subscribe(x =>
                 {
                     disconnectionCount++;
-                    disconnectionType = x;
+                    disconnectionType = x.Type;
                 });
 
                 await client.StartOrFail();
@@ -74,7 +74,8 @@ namespace Websocket.Client.Tests
                 string received = null;
                 var receivedCount = 0;
                 var disconnectionCount = 0;
-                var disconnectionType = DisconnectionType.Exit;
+                DisconnectionInfo disconnectionInfo = null;
+                Exception causedException = null;
 
                 client
                     .MessageReceived
@@ -88,7 +89,7 @@ namespace Websocket.Client.Tests
                 client.DisconnectionHappened.Subscribe(x =>
                 {
                     disconnectionCount++;
-                    disconnectionType = x;
+                    disconnectionInfo = x;
                 });
 
                 try
@@ -99,12 +100,15 @@ namespace Websocket.Client.Tests
                 {
                     // expected exception
                     _output.WriteLine($"Received exception: '{e.Message}'");
+                    causedException = e;
                 }
 
                 await Task.Delay(1000);
 
                 Assert.Equal(1, disconnectionCount);
-                Assert.Equal(DisconnectionType.Error, disconnectionType);
+                Assert.Equal(DisconnectionType.Error, disconnectionInfo.Type);
+                Assert.NotNull(disconnectionInfo.Exception);
+                Assert.Equal(causedException?.InnerException, disconnectionInfo.Exception);
 
                 Assert.Equal(0, receivedCount);
                 Assert.Null(received);
@@ -151,6 +155,8 @@ namespace Websocket.Client.Tests
                 string received = null;
                 var receivedCount = 0;
                 var receivedEvent = new ManualResetEvent(false);
+                var disconnectionCount = 0;
+                DisconnectionInfo disconnectionInfo = null;
 
                 client.MessageReceived
                     .Where(x => x.MessageType == WebSocketMessageType.Text)
@@ -160,6 +166,12 @@ namespace Websocket.Client.Tests
                         receivedCount++;
                         received = msg.Text;
                     });
+
+                client.DisconnectionHappened.Subscribe(x =>
+                {
+                    disconnectionCount++;
+                    disconnectionInfo = x;
+                });
 
                 await client.Start();
 
@@ -178,6 +190,10 @@ namespace Websocket.Client.Tests
                 // check that reconnection is disabled
                 await Task.Delay(8000);
                 Assert.Equal(1, receivedCount);
+                Assert.Equal(1, disconnectionCount);
+                Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
+                Assert.Equal(WebSocketCloseStatus.InternalServerError, disconnectionInfo.CloseStatus);
+                Assert.Equal("server error 500", disconnectionInfo.CloseStatusDescription);
             }
         }
     }

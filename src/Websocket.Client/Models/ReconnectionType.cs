@@ -1,4 +1,5 @@
-﻿namespace Websocket.Client
+﻿// ReSharper disable once CheckNamespace
+namespace Websocket.Client
 {
     /// <summary>
     /// Type that specify happened reconnection

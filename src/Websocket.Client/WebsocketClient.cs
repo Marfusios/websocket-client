@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Websocket.Client.Exceptions;
 using Websocket.Client.Logging;
+using Websocket.Client.Models;
 using Websocket.Client.Threading;
 
 namespace Websocket.Client
@@ -36,8 +37,8 @@ namespace Websocket.Client
         private CancellationTokenSource _cancellationTotal;
 
         private readonly Subject<ResponseMessage> _messageReceivedSubject = new Subject<ResponseMessage>();
-        private readonly Subject<ReconnectionType> _reconnectionSubject = new Subject<ReconnectionType>();
-        private readonly Subject<DisconnectionType> _disconnectedSubject = new Subject<DisconnectionType>();
+        private readonly Subject<ReconnectionInfo> _reconnectionSubject = new Subject<ReconnectionInfo>();
+        private readonly Subject<DisconnectionInfo> _disconnectedSubject = new Subject<DisconnectionInfo>();
 
         /// <summary>
         /// A simple websocket client with built-in reconnection and error handling
@@ -90,12 +91,12 @@ namespace Websocket.Client
         /// <summary>
         /// Stream for reconnection event (triggered after the new connection) 
         /// </summary>
-        public IObservable<ReconnectionType> ReconnectionHappened => _reconnectionSubject.AsObservable();
+        public IObservable<ReconnectionInfo> ReconnectionHappened => _reconnectionSubject.AsObservable();
 
         /// <summary>
         /// Stream for disconnection event (triggered after the connection was lost) 
         /// </summary>
-        public IObservable<DisconnectionType> DisconnectionHappened => _disconnectedSubject.AsObservable();
+        public IObservable<DisconnectionInfo> DisconnectionHappened => _disconnectedSubject.AsObservable();
 
         /// <summary>
         /// Time range in ms, how long to wait before reconnecting if no message comes from server.
@@ -183,7 +184,7 @@ namespace Websocket.Client
 
             IsRunning = false;
             IsStarted = false;
-            _disconnectedSubject.OnNext(DisconnectionType.Exit);
+            _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.Exit, _client, null));
         }
 
         /// <summary>
@@ -231,6 +232,7 @@ namespace Websocket.Client
             IsStarted = false;
             IsRunning = false;
             _stopping = false;
+            _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
             return true;
         }
 
@@ -274,7 +276,7 @@ namespace Websocket.Client
             {
                 _client = await _connectionFactory(uri, token).ConfigureAwait(false);
                 IsRunning = true;
-                _reconnectionSubject.OnNext(type);
+                _reconnectionSubject.OnNext(ReconnectionInfo.Create(type));
 #pragma warning disable 4014
                 Listen(_client, token);
 #pragma warning restore 4014
@@ -283,7 +285,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                _disconnectedSubject.OnNext(DisconnectionType.Error);
+                _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.Error, _client, e));
 
                 if (failFast)
                 {
@@ -303,7 +305,7 @@ namespace Websocket.Client
                 Logger.Error(e, L($"Exception while connecting. " +
                                   $"Waiting {timeout.Seconds} sec before next reconnection try."));
                 await Task.Delay(timeout, token).ConfigureAwait(false);
-                await Reconnect(ReconnectionType.Error, false).ConfigureAwait(false);
+                await Reconnect(ReconnectionType.Error, false, e).ConfigureAwait(false);
             }       
         }
 
@@ -314,6 +316,7 @@ namespace Websocket.Client
 
         private async Task Listen(WebSocket client, CancellationToken token)
         {
+            Exception causedException = null;
             try
             {
                 do
@@ -351,21 +354,25 @@ namespace Websocket.Client
 
                 } while (client.State == WebSocketState.Open && !token.IsCancellationRequested);
             }
-            catch (TaskCanceledException)
+            catch (TaskCanceledException e)
             {
                 // task was canceled, ignore
+                causedException = e;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e)
             {
                 // operation was canceled, ignore
+                causedException = e;
             }
-            catch (ObjectDisposedException)
+            catch (ObjectDisposedException e)
             {
                 // client was disposed, ignore
+                causedException = e;
             }
             catch (Exception e)
             {
                 Logger.Error(e, L($"Error while listening to websocket stream, error: '{e.Message}'"));
+                causedException = e;
             }
 
 
@@ -383,7 +390,7 @@ namespace Websocket.Client
 
             // listening thread is lost, we have to reconnect
 #pragma warning disable 4014
-            ReconnectSynchronized(ReconnectionType.Lost, false);
+            ReconnectSynchronized(ReconnectionType.Lost, false, causedException);
 #pragma warning restore 4014
         }
 

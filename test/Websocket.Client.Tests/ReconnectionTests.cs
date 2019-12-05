@@ -166,7 +166,7 @@ namespace Websocket.Client.Tests
                 {
                     _output.WriteLine($"Reconnected: '{x}'");
                     reconnectedCount++;
-                    lastReconnectionType = x;
+                    lastReconnectionType = x.Type;
                 });
 
                 await client.Start();
@@ -214,7 +214,7 @@ namespace Websocket.Client.Tests
                 {
                     _output.WriteLine($"Reconnected: '{x}'");
                     reconnectedCount++;
-                    lastReconnectionType = x;
+                    lastReconnectionType = x.Type;
                 });
 
                 await client.Start();
@@ -255,7 +255,8 @@ namespace Websocket.Client.Tests
                 var reconnectedCount = 0;
                 var lastReconnectionType = ReconnectionType.NoMessageReceived;
                 var disconnectionCount = 0;
-                var lastDisconnectionType = DisconnectionType.Exit;
+                DisconnectionInfo disconnectionInfo = null;
+                Exception causedException = null;
 
                 client.IsReconnectionEnabled = true;
                 client.ReconnectTimeout = null;
@@ -272,13 +273,13 @@ namespace Websocket.Client.Tests
                 {
                     _output.WriteLine($"Reconnected: '{x}'");
                     reconnectedCount++;
-                    lastReconnectionType = x;
+                    lastReconnectionType = x.Type;
                 });
 
                 client.DisconnectionHappened.Subscribe(x =>
                 {
                     disconnectionCount++;
-                    lastDisconnectionType = x;
+                    disconnectionInfo = x;
                 });
 
                 await client.Start();
@@ -295,12 +296,15 @@ namespace Websocket.Client.Tests
                 {
                     // expected exception
                     _output.WriteLine($"Received exception: '{e.Message}'");
+                    causedException = e;
                 }
 
                 await Task.Delay(1000);
 
                 Assert.Equal(2, disconnectionCount);
-                Assert.Equal(DisconnectionType.Error, lastDisconnectionType);
+                Assert.Equal(DisconnectionType.Error, disconnectionInfo.Type);
+                Assert.NotNull(disconnectionInfo.Exception);
+                Assert.Equal(causedException?.InnerException, disconnectionInfo.Exception);
 
                 Assert.Equal(1, receivedCount);
                 Assert.Equal(1, reconnectedCount);

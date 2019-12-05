@@ -38,7 +38,7 @@ namespace Websocket.Client
 
             try
             {
-                await ReconnectSynchronized(ReconnectionType.ByUser, failFast).ConfigureAwait(false);
+                await ReconnectSynchronized(ReconnectionType.ByUser, failFast, null).ConfigureAwait(false);
             }
             finally
             {
@@ -46,15 +46,15 @@ namespace Websocket.Client
             }
         }
 
-        private async Task ReconnectSynchronized(ReconnectionType type, bool failFast)
+        private async Task ReconnectSynchronized(ReconnectionType type, bool failFast, Exception causedException)
         {
             using (await _locker.LockAsync())
             {
-                await Reconnect(type, failFast);
+                await Reconnect(type, failFast, causedException);
             }
         }
 
-        private async Task Reconnect(ReconnectionType type, bool failFast)
+        private async Task Reconnect(ReconnectionType type, bool failFast, Exception causedException)
         {
             IsRunning = false;
             if (_disposing)
@@ -62,7 +62,11 @@ namespace Websocket.Client
 
             _reconnecting = true;
             if (type != ReconnectionType.Error)
-                _disconnectedSubject.OnNext(TranslateTypeToDisconnection(type));
+            {
+                var disType = TranslateTypeToDisconnection(type);
+                _disconnectedSubject.OnNext(DisconnectionInfo.Create(disType, _client, causedException));
+            }
+                
 
             _cancellation.Cancel();
             _client?.Abort();
@@ -111,7 +115,7 @@ namespace Websocket.Client
 
                 DeactivateLastChance();
 #pragma warning disable 4014
-                ReconnectSynchronized(ReconnectionType.NoMessageReceived, false);
+                ReconnectSynchronized(ReconnectionType.NoMessageReceived, false, null);
 #pragma warning restore 4014
             }
         }

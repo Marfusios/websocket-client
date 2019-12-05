@@ -2,6 +2,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
+using Websocket.Client.Models;
 
 namespace Websocket.Client
 {
@@ -22,12 +23,12 @@ namespace Websocket.Client
             /// <summary>
         /// Stream for reconnection event (triggered after the new connection) 
         /// </summary>
-        IObservable<ReconnectionType> ReconnectionHappened { get; }
+        IObservable<ReconnectionInfo> ReconnectionHappened { get; }
 
         /// <summary>
         /// Stream for disconnection event (triggered after the connection was lost) 
         /// </summary>
-        IObservable<DisconnectionType> DisconnectionHappened { get; }
+        IObservable<DisconnectionInfo> DisconnectionHappened { get; }
 
         /// <summary>
         /// Time range in ms, how long to wait before reconnecting if no message comes from server.

@@ -22,7 +22,12 @@ namespace Websocket.Client.Tests.TestServer
         public IWebsocketClient CreateClient()
         {
             var httpClient = _factory.CreateClient(); // This is needed since _factory.Server would otherwise be null
-            var wsUri = new UriBuilder(_factory.Server.BaseAddress)
+            return CreateClient(_factory.Server.BaseAddress);
+        }
+
+        public IWebsocketClient CreateClient(Uri serverUrl)
+        {
+            var wsUri = new UriBuilder(serverUrl)
             {
                 Scheme = "ws",
                 Path = "ws"
@@ -30,6 +35,11 @@ namespace Websocket.Client.Tests.TestServer
             return new WebsocketClient(wsUri,
                 async (uri, token) =>
                 {
+                    if (_factory.Server == null)
+                    {
+                        throw new InvalidOperationException("Connection to websocket server failed, check url");
+                    }
+
                     NativeTestClient = _factory.Server.CreateWebSocketClient();
                     var ws = await NativeTestClient.ConnectAsync(uri, token).ConfigureAwait(false);
                     //await Task.Delay(1000, token);

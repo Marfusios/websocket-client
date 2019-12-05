@@ -64,6 +64,18 @@ namespace Websocket.Client
             return SendInternalSynchronized(message);
         }
 
+        /// <summary>
+        /// Stream/publish fake message (via 'MessageReceived' observable).
+        /// Use for testing purposes to simulate a server message. 
+        /// </summary>
+        /// <param name="message">Message to be stream</param>
+        public void StreamFakeMessage(ResponseMessage message)
+        {
+            Validations.Validations.ValidateInput(message, nameof(message));
+
+            _messageReceivedSubject.OnNext(message);
+        }
+
 
         private async Task SendTextFromQueue()
         {

@@ -2,6 +2,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
+using Websocket.Client.Models;
 
 namespace Websocket.Client
 {
@@ -22,24 +23,26 @@ namespace Websocket.Client
             /// <summary>
         /// Stream for reconnection event (triggered after the new connection) 
         /// </summary>
-        IObservable<ReconnectionType> ReconnectionHappened { get; }
+        IObservable<ReconnectionInfo> ReconnectionHappened { get; }
 
         /// <summary>
         /// Stream for disconnection event (triggered after the connection was lost) 
         /// </summary>
-        IObservable<DisconnectionType> DisconnectionHappened { get; }
+        IObservable<DisconnectionInfo> DisconnectionHappened { get; }
 
         /// <summary>
         /// Time range in ms, how long to wait before reconnecting if no message comes from server.
-        /// Default 60000 ms (1 minute)
+        /// Set null to disable this feature. 
+        /// Default: 1 minute.
         /// </summary>
-        int ReconnectTimeoutMs { get; set; }
+        TimeSpan? ReconnectTimeout { get; set; }
 
         /// <summary>
         /// Time range in ms, how long to wait before reconnecting if last reconnection failed.
-        /// Default 60000 ms (1 minute)
+        /// Set null to disable this feature. 
+        /// Default: 1 minute.
         /// </summary>
-        int ErrorReconnectTimeoutMs { get; set; }
+        TimeSpan? ErrorReconnectTimeout { get; set; }
 
         /// <summary>
         /// Get or set the name of the current websocket client instance.
@@ -75,9 +78,18 @@ namespace Websocket.Client
         Encoding MessageEncoding { get; set; }
 
         /// <summary>
-        /// Start listening to the websocket stream on the background thread
+        /// Start listening to the websocket stream on the background thread.
+        /// In case of connection error it doesn't throw an exception.
+        /// Only streams a message via 'DisconnectionHappened' and logs it. 
         /// </summary>
         Task Start();
+
+        /// <summary>
+        /// Start listening to the websocket stream on the background thread. 
+        /// In case of connection error it throws an exception.
+        /// Fail fast approach. 
+        /// </summary>
+        Task StartOrFail();
 
         /// <summary>
         /// Stop/close websocket connection with custom close code.
@@ -121,7 +133,22 @@ namespace Websocket.Client
         /// <summary>
         /// Force reconnection. 
         /// Closes current websocket stream and perform a new connection to the server.
+        /// In case of connection error it doesn't throw an exception, but tries to reconnect indefinitely. 
         /// </summary>
         Task Reconnect();
+
+        /// <summary>
+        /// Force reconnection. 
+        /// Closes current websocket stream and perform a new connection to the server.
+        /// In case of connection error it throws an exception and doesn't perform any other reconnection try. 
+        /// </summary>
+        Task ReconnectOrFail();
+
+        /// <summary>
+        /// Stream/publish fake message (via 'MessageReceived' observable).
+        /// Use for testing purposes to simulate a server message. 
+        /// </summary>
+        /// <param name="message">Message to be stream</param>
+        void StreamFakeMessage(ResponseMessage message);
     }
 }

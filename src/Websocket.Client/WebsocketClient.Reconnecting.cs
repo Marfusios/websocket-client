@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Websocket.Client.Logging;
@@ -13,8 +11,24 @@ namespace Websocket.Client
         /// <summary>
         /// Force reconnection. 
         /// Closes current websocket stream and perform a new connection to the server.
+        /// In case of connection error it doesn't throw an exception, but tries to reconnect indefinitely. 
         /// </summary>
-        public async Task Reconnect()
+        public Task Reconnect()
+        {
+            return ReconnectInternal(false);
+        }
+
+        /// <summary>
+        /// Force reconnection. 
+        /// Closes current websocket stream and perform a new connection to the server.
+        /// In case of connection error it throws an exception and doesn't perform any other reconnection try. 
+        /// </summary>
+        public Task ReconnectOrFail()
+        {
+            return ReconnectInternal(true);
+        }
+
+        private async Task ReconnectInternal(bool failFast)
         {
             if (!IsStarted)
             {
@@ -24,8 +38,7 @@ namespace Websocket.Client
 
             try
             {
-                await ReconnectSynchronized(ReconnectionType.ByUser).ConfigureAwait(false);
-
+                await ReconnectSynchronized(ReconnectionType.ByUser, failFast, null).ConfigureAwait(false);
             }
             finally
             {
@@ -33,30 +46,39 @@ namespace Websocket.Client
             }
         }
 
-
-        private async Task ReconnectSynchronized(ReconnectionType type)
+        private async Task ReconnectSynchronized(ReconnectionType type, bool failFast, Exception causedException)
         {
             using (await _locker.LockAsync())
             {
-                await Reconnect(type);
+                await Reconnect(type, failFast, causedException);
             }
         }
 
-        private async Task Reconnect(ReconnectionType type)
+        private async Task Reconnect(ReconnectionType type, bool failFast, Exception causedException)
         {
             IsRunning = false;
             if (_disposing)
                 return;
 
             _reconnecting = true;
-            if (type != ReconnectionType.Error)
-                _disconnectedSubject.OnNext(TranslateTypeToDisconnection(type));
 
+            var disType = TranslateTypeToDisconnection(type);
+            var disInfo = DisconnectionInfo.Create(disType, _client, causedException);
+            if (type != ReconnectionType.Error)
+            {
+                _disconnectedSubject.OnNext(disInfo);
+                if (disInfo.CancelReconnection)
+                {
+                    // reconnection canceled by user, do nothing
+                    Logger.Info(L($"Reconnecting canceled by user, exiting."));
+                }
+            }
+                
             _cancellation.Cancel();
             _client?.Abort();
             _client?.Dispose();
 
-            if (!IsReconnectionEnabled)
+            if (!IsReconnectionEnabled || disInfo.CancelReconnection)
             {
                 // reconnection disabled, do nothing
                 IsStarted = false;
@@ -66,7 +88,7 @@ namespace Websocket.Client
 
             Logger.Debug(L("Reconnecting..."));
             _cancellation = new CancellationTokenSource();
-            await StartClient(_url, _cancellation.Token, type).ConfigureAwait(false);
+            await StartClient(_url, _cancellation.Token, type, failFast).ConfigureAwait(false);
             _reconnecting = false;
         }
 
@@ -84,14 +106,14 @@ namespace Websocket.Client
 
         private void LastChance(object state)
         {
-            if (!IsReconnectionEnabled)
+            if (!IsReconnectionEnabled || ReconnectTimeout == null)
             {
                 // reconnection disabled, do nothing
                 DeactivateLastChance();
                 return;
             }
 
-            var timeoutMs = Math.Abs(ReconnectTimeoutMs);
+            var timeoutMs = Math.Abs(ReconnectTimeout.Value.TotalMilliseconds);
             var diffMs = Math.Abs(DateTime.UtcNow.Subtract(_lastReceivedMsg).TotalMilliseconds);
             if (diffMs > timeoutMs)
             {
@@ -99,7 +121,7 @@ namespace Websocket.Client
 
                 DeactivateLastChance();
 #pragma warning disable 4014
-                ReconnectSynchronized(ReconnectionType.NoMessageReceived);
+                ReconnectSynchronized(ReconnectionType.NoMessageReceived, false, null);
 #pragma warning restore 4014
             }
         }

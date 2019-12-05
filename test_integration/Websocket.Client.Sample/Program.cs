@@ -52,9 +52,9 @@ namespace Websocket.Client.Sample
             using (IWebsocketClient client = new WebsocketClient(url, factory))
             {
                 client.Name = "Bitmex";
-                client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
-                client.ErrorReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
-                client.ReconnectionHappened.Subscribe(async type =>
+                client.ReconnectTimeout = TimeSpan.FromSeconds(30);
+                client.ErrorReconnectTimeout = TimeSpan.FromSeconds(30);
+                client.ReconnectionHappened.Subscribe(type =>
                 {
                     Log.Information($"Reconnection happened, type: {type}, url: {client.Url}");
                 });
@@ -65,10 +65,6 @@ namespace Websocket.Client.Sample
                 {
                     Log.Information($"Message received: {msg}");
                 });
-
-                client.DisconnectionHappened.Subscribe(type =>
-                    Log.Warning($"Disconnection happened, type: {type}")
-                    );
 
                 Log.Information("Starting...");
                 client.Start().Wait();

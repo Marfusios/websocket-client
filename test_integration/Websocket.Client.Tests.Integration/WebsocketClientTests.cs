@@ -130,7 +130,7 @@ namespace Websocket.Client.Tests.Integration
                 var receivedEvent = new ManualResetEvent(false);
 
                 client.IsReconnectionEnabled = false;
-                client.ReconnectTimeoutMs = 2 * 1000; // 2sec
+                client.ReconnectTimeout = TimeSpan.FromSeconds(2);
 
                 client.MessageReceived.Subscribe(msg =>
                 {
@@ -162,7 +162,7 @@ namespace Websocket.Client.Tests.Integration
                 var receivedCount = 0;
 
                 client.IsReconnectionEnabled = true;
-                client.ReconnectTimeoutMs = 5 * 1000; // 5sec
+                client.ReconnectTimeout = TimeSpan.FromSeconds(5);
 
                 client.MessageReceived.Subscribe(msg =>
                 {
@@ -183,7 +183,7 @@ namespace Websocket.Client.Tests.Integration
         {
             using (IWebsocketClient client = new WebsocketClient(WebsocketUrl))
             {
-                client.ReconnectTimeoutMs = 5 * 1000; // 5sec
+                client.ReconnectTimeout = TimeSpan.FromSeconds(5);
 
                 string received = null;
                 var receivedCount = 0;

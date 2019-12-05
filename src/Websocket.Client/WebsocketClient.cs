@@ -99,15 +99,17 @@ namespace Websocket.Client
 
         /// <summary>
         /// Time range in ms, how long to wait before reconnecting if no message comes from server.
-        /// Default 60000 ms (1 minute)
+        /// Set null to disable this feature. 
+        /// Default: 1 minute
         /// </summary>
-        public int ReconnectTimeoutMs { get; set; } = 60 * 1000;
+        public TimeSpan? ReconnectTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
         /// Time range in ms, how long to wait before reconnecting if last reconnection failed.
-        /// Default 60000 ms (1 minute)
+        /// Set null to disable this feature. 
+        /// Default: 1 minute
         /// </summary>
-        public int ErrorReconnectTimeoutMs { get; set; } = 60 * 1000;
+        public TimeSpan? ErrorReconnectTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
         /// Enable or disable reconnection functionality (enabled by default)
@@ -183,27 +185,25 @@ namespace Websocket.Client
             IsStarted = false;
             _disconnectedSubject.OnNext(DisconnectionType.Exit);
         }
-       
+
         /// <summary>
-        /// Start listening to the websocket stream on the background thread
+        /// Start listening to the websocket stream on the background thread.
+        /// In case of connection error it doesn't throw an exception.
+        /// Only streams a message via 'DisconnectionHappened' and logs it. 
         /// </summary>
-        public async Task Start()
+        public Task Start()
         {
-            if (IsStarted)
-            {
-                Logger.Debug(L("Client already started, ignoring.."));
-                return;
-            }
-            IsStarted = true;
+            return StartInternal(false);
+        }
 
-            Logger.Debug(L("Starting.."));
-            _cancellation = new CancellationTokenSource();
-            _cancellationTotal = new CancellationTokenSource();
-
-            await StartClient(_url, _cancellation.Token, ReconnectionType.Initial).ConfigureAwait(false);
-
-            StartBackgroundThreadForSendingText();
-            StartBackgroundThreadForSendingBinary();
+        /// <summary>
+        /// Start listening to the websocket stream on the background thread. 
+        /// In case of connection error it throws an exception.
+        /// Fail fast approach. 
+        /// </summary>
+        public Task StartOrFail()
+        {
+            return StartInternal(true);
         }
 
         /// <inheritdoc />
@@ -246,7 +246,27 @@ namespace Websocket.Client
             });
         }
 
-        private async Task StartClient(Uri uri, CancellationToken token, ReconnectionType type)
+        private async Task StartInternal(bool failFast)
+        {
+            if (IsStarted)
+            {
+                Logger.Debug(L("Client already started, ignoring.."));
+                return;
+            }
+
+            IsStarted = true;
+
+            Logger.Debug(L("Starting.."));
+            _cancellation = new CancellationTokenSource();
+            _cancellationTotal = new CancellationTokenSource();
+
+            await StartClient(_url, _cancellation.Token, ReconnectionType.Initial, failFast).ConfigureAwait(false);
+
+            StartBackgroundThreadForSendingText();
+            StartBackgroundThreadForSendingBinary();
+        }
+
+        private async Task StartClient(Uri uri, CancellationToken token, ReconnectionType type, bool failFast)
         {
             DeactivateLastChance();
             
@@ -264,10 +284,26 @@ namespace Websocket.Client
             catch (Exception e)
             {
                 _disconnectedSubject.OnNext(DisconnectionType.Error);
+
+                if (failFast)
+                {
+                    // fail fast, propagate exception
+                    // do not reconnect
+                    throw new WebsocketException($"Failed to start Websocket client, error: '{e.Message}'", e);
+                }
+
+                if (ErrorReconnectTimeout == null)
+                {
+                    Logger.Error(e, L($"Exception while connecting. " +
+                                      $"Reconnecting disable, exiting. "));
+                    return;
+                }
+
+                var timeout = ErrorReconnectTimeout.Value;
                 Logger.Error(e, L($"Exception while connecting. " +
-                                  $"Waiting {ErrorReconnectTimeoutMs / 1000} sec before next reconnection try."));
-                await Task.Delay(ErrorReconnectTimeoutMs, token).ConfigureAwait(false);
-                await Reconnect(ReconnectionType.Error).ConfigureAwait(false);
+                                  $"Waiting {timeout.Seconds} sec before next reconnection try."));
+                await Task.Delay(timeout, token).ConfigureAwait(false);
+                await Reconnect(ReconnectionType.Error, false).ConfigureAwait(false);
             }       
         }
 
@@ -334,11 +370,20 @@ namespace Websocket.Client
 
 
             if (_disposing || _reconnecting || _stopping || !IsStarted)
+            {
+                // reconnection already in progress or client stopped/disposed, do nothing
                 return;
+            }
+                
+            if (client != _client)
+            {
+                // already reconnected, do nothing
+                return;
+            }
 
             // listening thread is lost, we have to reconnect
 #pragma warning disable 4014
-            ReconnectSynchronized(ReconnectionType.Lost);
+            ReconnectSynchronized(ReconnectionType.Lost, false);
 #pragma warning restore 4014
         }
 

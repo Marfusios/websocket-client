@@ -311,5 +311,70 @@ namespace Websocket.Client.Tests
                 Assert.Equal(ReconnectionType.Initial, lastReconnectionType);
             }
         }
+
+
+        [Fact]
+        public async Task CancelingReconnection_ViaDisconnectionStream_ShouldWork()
+        {
+            using (var client = _context.CreateClient())
+            {
+                var receivedCount = 0;
+                var reconnectedCount = 0;
+                var lastReconnectionType = ReconnectionType.NoMessageReceived;
+                var disconnectionCount = 0;
+                DisconnectionInfo disconnectionInfo = null;
+
+                client.IsReconnectionEnabled = true;
+                client.ReconnectTimeout = null;
+
+                client.MessageReceived
+                    .Where(x => x.MessageType == WebSocketMessageType.Text)
+                    .Subscribe(msg =>
+                    {
+                        _output.WriteLine($"Received: '{msg}'");
+                        receivedCount++;
+                    });
+
+                client.ReconnectionHappened.Subscribe(x =>
+                {
+                    _output.WriteLine($"Reconnected: '{x}'");
+                    reconnectedCount++;
+                    lastReconnectionType = x.Type;
+                });
+
+                client.DisconnectionHappened.Subscribe(x =>
+                {
+                    disconnectionCount++;
+                    disconnectionInfo = x;
+
+                    if (disconnectionCount >= 2)
+                        disconnectionInfo.CancelReconnection = true;
+                });
+
+                await client.Start();
+
+                await Task.Delay(1000);
+                await client.Reconnect();
+
+                await Task.Delay(1000);
+                await client.Reconnect();
+
+                await Task.Delay(1000);
+                await client.Reconnect();
+
+                await Task.Delay(1000);
+
+                Assert.Equal(2, disconnectionCount);
+                Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
+                Assert.Null(disconnectionInfo.Exception);
+
+                Assert.Equal(2, receivedCount);
+                Assert.Equal(2, reconnectedCount);
+                Assert.Equal(ReconnectionType.ByUser, lastReconnectionType);
+
+                Assert.False(client.IsRunning);
+                Assert.False(client.IsStarted);
+            }
+        }
     }
 }

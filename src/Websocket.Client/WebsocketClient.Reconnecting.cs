@@ -61,18 +61,24 @@ namespace Websocket.Client
                 return;
 
             _reconnecting = true;
+
+            var disType = TranslateTypeToDisconnection(type);
+            var disInfo = DisconnectionInfo.Create(disType, _client, causedException);
             if (type != ReconnectionType.Error)
             {
-                var disType = TranslateTypeToDisconnection(type);
-                _disconnectedSubject.OnNext(DisconnectionInfo.Create(disType, _client, causedException));
+                _disconnectedSubject.OnNext(disInfo);
+                if (disInfo.CancelReconnection)
+                {
+                    // reconnection canceled by user, do nothing
+                    Logger.Info(L($"Reconnecting canceled by user, exiting."));
+                }
             }
                 
-
             _cancellation.Cancel();
             _client?.Abort();
             _client?.Dispose();
 
-            if (!IsReconnectionEnabled)
+            if (!IsReconnectionEnabled || disInfo.CancelReconnection)
             {
                 // reconnection disabled, do nothing
                 IsStarted = false;

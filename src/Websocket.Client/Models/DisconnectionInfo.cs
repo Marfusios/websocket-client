@@ -47,6 +47,12 @@ namespace Websocket.Client
 
 
         /// <summary>
+        /// Set to true if you want to cancel ongoing reconnection
+        /// </summary>
+        public bool CancelReconnection { get; set; }
+
+
+        /// <summary>
         /// Simple factory method
         /// </summary>
         public static DisconnectionInfo Create(DisconnectionType type, WebSocket client, Exception exception)

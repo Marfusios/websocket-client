@@ -285,7 +285,16 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.Error, _client, e));
+                var info = DisconnectionInfo.Create(DisconnectionType.Error, _client, e);
+                _disconnectedSubject.OnNext(info);
+
+                if (info.CancelReconnection)
+                {
+                    // reconnection canceled by user, do nothing
+                    Logger.Error(L($"Exception while connecting. " +
+                                      $"Reconnecting canceled by user, exiting. Error: '{e.Message}'"));
+                    return;
+                }
 
                 if (failFast)
                 {
@@ -296,14 +305,14 @@ namespace Websocket.Client
 
                 if (ErrorReconnectTimeout == null)
                 {
-                    Logger.Error(e, L($"Exception while connecting. " +
-                                      $"Reconnecting disable, exiting. "));
+                    Logger.Error(L($"Exception while connecting. " +
+                                      $"Reconnecting disable, exiting. Error: '{e.Message}'"));
                     return;
                 }
 
                 var timeout = ErrorReconnectTimeout.Value;
-                Logger.Error(e, L($"Exception while connecting. " +
-                                  $"Waiting {timeout.Seconds} sec before next reconnection try."));
+                Logger.Error(L($"Exception while connecting. " +
+                                  $"Waiting {timeout.Seconds} sec before next reconnection try. Error: '{e.Message}'"));
                 await Task.Delay(timeout, token).ConfigureAwait(false);
                 await Reconnect(ReconnectionType.Error, false, e).ConfigureAwait(false);
             }       

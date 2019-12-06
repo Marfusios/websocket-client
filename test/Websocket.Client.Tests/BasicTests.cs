@@ -44,11 +44,11 @@ namespace Websocket.Client.Tests
 
                 await client.Start();
 
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
 
                 receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
@@ -82,7 +82,7 @@ namespace Websocket.Client.Tests
 
                 for (int i = 0; i < 6; i++)
                 {
-                    await client.Send($"echo:{i}");
+                    client.Send($"echo:{i}");
                 }
 
                 receivedEvent.WaitOne(TimeSpan.FromSeconds(30));

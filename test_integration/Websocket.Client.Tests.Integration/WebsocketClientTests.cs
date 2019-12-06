@@ -52,10 +52,10 @@ namespace Websocket.Client.Tests.Integration
                 var receivedCount = 0;
                 var receivedEvent = new ManualResetEvent(false);
 
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
 
                 client
                     .MessageReceived
@@ -71,9 +71,9 @@ namespace Websocket.Client.Tests.Integration
 
                 await client.Start();
 
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
 
                 receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
@@ -100,7 +100,7 @@ namespace Websocket.Client.Tests.Integration
                 });
 
                 await client.Start();
-                await client.Send(new byte[] {10, 14, 15, 16});
+                client.Send(new byte[] {10, 14, 15, 16});
 
                 receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
@@ -188,11 +188,19 @@ namespace Websocket.Client.Tests.Integration
                 string received = null;
                 var receivedCount = 0;
                 var receivedEvent = new ManualResetEvent(false);
+                var disconnectionCount = 0;
+                DisconnectionInfo disconnectionInfo = null;
 
                 client.MessageReceived.Subscribe(msg =>
                 {
                     receivedCount++;
                     received = msg.Text;
+                });
+
+                client.DisconnectionHappened.Subscribe(x =>
+                {
+                    disconnectionCount++;
+                    disconnectionInfo = x;
                 });
 
                 await client.Start();
@@ -214,6 +222,10 @@ namespace Websocket.Client.Tests.Integration
 
                 var nativeClient = client.NativeClient;
                 Assert.NotNull(nativeClient);
+                Assert.Equal(1, disconnectionCount);
+                Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
+                Assert.Equal(WebSocketCloseStatus.InternalServerError, disconnectionInfo.CloseStatus);
+                Assert.Equal("server error 500", disconnectionInfo.CloseStatusDescription);
                 Assert.Equal(WebSocketState.Aborted, nativeClient.State);
                 Assert.Equal(WebSocketCloseStatus.InternalServerError, nativeClient.CloseStatus);
                 Assert.Equal("server error 500", nativeClient.CloseStatusDescription);

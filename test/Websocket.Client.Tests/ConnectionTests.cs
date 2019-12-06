@@ -50,11 +50,11 @@ namespace Websocket.Client.Tests
 
                 await client.StartOrFail();
 
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
 
                 await Task.Delay(1000);
 
@@ -175,13 +175,10 @@ namespace Websocket.Client.Tests
 
                 await client.Start();
 
-#pragma warning disable 4014
-                Task.Run(async () =>
-#pragma warning restore 4014
+                _ = Task.Run(async () =>
                 {
                     await Task.Delay(200);
-                    var success = await client.Stop(WebSocketCloseStatus.InternalServerError, "server error 500");
-                    Assert.True(success);
+                    await client.Stop(WebSocketCloseStatus.InternalServerError, "server error 500");
                     receivedEvent.Set();
                 });
 
@@ -190,7 +187,7 @@ namespace Websocket.Client.Tests
                 // check that reconnection is disabled
                 await Task.Delay(8000);
                 Assert.Equal(1, receivedCount);
-                Assert.Equal(1, disconnectionCount);
+                Assert.Equal(2, disconnectionCount);
                 Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
                 Assert.Equal(WebSocketCloseStatus.InternalServerError, disconnectionInfo.CloseStatus);
                 Assert.Equal("server error 500", disconnectionInfo.CloseStatusDescription);

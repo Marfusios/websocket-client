@@ -29,10 +29,10 @@ namespace Websocket.Client.Tests
                 var receivedCount = 0;
                 var receivedEvent = new ManualResetEvent(false);
 
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
 
                 client
                     .MessageReceived
@@ -48,9 +48,9 @@ namespace Websocket.Client.Tests
 
                 await client.Start();
 
-                await client.Send("ping");
-                await client.Send("ping");
-                await client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
 
                 receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
@@ -75,11 +75,55 @@ namespace Websocket.Client.Tests
                 });
 
                 await client.Start();
-                await client.Send(new byte[] { 10, 14, 15, 16 });
+                client.Send(new byte[] { 10, 14, 15, 16 });
 
                 receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
                 Assert.NotNull(received);
+            }
+        }
+
+        [Fact]
+        public async Task SendMessageAfterDispose_ShouldDoNothing()
+        {
+            using (var client = _context.CreateClient())
+            {
+                string received = null;
+                var receivedCount = 0;
+                var receivedEvent = new ManualResetEvent(false);
+
+                client
+                    .MessageReceived
+                    .Where(x => x.Text.ToLower().Contains("pong"))
+                    .Subscribe(msg =>
+                    {
+                        receivedCount++;
+                        received = msg.Text;
+
+                        if (receivedCount >= 3)
+                            receivedEvent.Set();
+                    });
+
+                await client.Start();
+
+                client.Send("ping");
+                client.Send("ping");
+                client.Send("ping");
+
+                await Task.Delay(1000);
+                receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+
+                client.Dispose();
+
+                await Task.Delay(2000);
+
+                client.Send("ping");
+                await client.SendInstant("ping");
+
+                await Task.Delay(1000);
+
+                Assert.NotNull(received);
+                Assert.Equal(3, receivedCount);
             }
         }
     }

@@ -29,6 +29,12 @@ namespace Websocket.Client
         /// <summary>
         /// Type used when disconnection was requested by user
         /// </summary>
-        ByUser = 4
+        ByUser = 4,
+
+
+        /// <summary>
+        /// Type used when disconnection was requested by server
+        /// </summary>
+        ByServer = 5
     }
 }

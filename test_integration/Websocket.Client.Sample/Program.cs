@@ -58,8 +58,8 @@ namespace Websocket.Client.Sample
                 {
                     Log.Information($"Reconnection happened, type: {type}, url: {client.Url}");
                 });
-                client.DisconnectionHappened.Subscribe(type => 
-                    Log.Warning($"Disconnection happened, type: {type}"));
+                client.DisconnectionHappened.Subscribe(info => 
+                    Log.Warning($"Disconnection happened, type: {info.Type}"));
 
                 client.MessageReceived.Subscribe(msg =>
                 {
@@ -91,7 +91,7 @@ namespace Websocket.Client.Sample
                 if(!client.IsRunning)
                     continue;
 
-                await client.Send("ping");
+                client.Send("ping");
             }
         }
 

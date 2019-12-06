@@ -22,10 +22,10 @@ namespace Websocket.Client
         private static readonly ILog Logger = GetLogger();
 
         private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();
-        private Uri _url;
-        private Timer _lastChanceTimer;
         private readonly Func<Uri, CancellationToken, Task<WebSocket>> _connectionFactory;
 
+        private Uri _url;
+        private Timer _lastChanceTimer;
         private DateTime _lastReceivedMsg = DateTime.UtcNow; 
 
         private bool _disposing;
@@ -48,7 +48,6 @@ namespace Websocket.Client
         public WebsocketClient(Uri url, Func<ClientWebSocket> clientFactory = null)
             : this(url, GetClientFactory(clientFactory))
         {
-
         }
 
         /// <summary>
@@ -167,6 +166,8 @@ namespace Websocket.Client
             Logger.Debug(L("Disposing.."));
             try
             {
+                _messagesTextToSendQueue?.Writer.Complete();
+                _messagesBinaryToSendQueue?.Writer.Complete();
                 _lastChanceTimer?.Dispose();
                 _cancellation?.Cancel();
                 _cancellationTotal?.Cancel();
@@ -174,8 +175,6 @@ namespace Websocket.Client
                 _client?.Dispose();
                 _cancellation?.Dispose();
                 _cancellationTotal?.Dispose();
-                _messagesTextToSendQueue?.Dispose();
-                _messagesBinaryToSendQueue?.Dispose();
             }
             catch (Exception e)
             {
@@ -207,33 +206,38 @@ namespace Websocket.Client
             return StartInternal(true);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Stop/close websocket connection with custom close code.
+        /// Method doesn't throw exception, only logs it and mark client as closed. 
+        /// </summary>
+        /// <returns>Returns true if close was initiated successfully</returns>
         public async Task<bool> Stop(WebSocketCloseStatus status, string statusDescription)
         {
-            if (_client == null)
-            {
-                IsStarted = false;
-                IsRunning = false;
-                return false;
-            }
-            
-            DeactivateLastChance();
-
-            try
-            {
-                _stopping = true;
-                await _client.CloseAsync(status, statusDescription, _cancellation?.Token ?? CancellationToken.None);
-            }
-            catch (Exception e)
-            {
-                Logger.Error(L($"Error while stopping client, message: '{e.Message}'"));
-            }
-
-            IsStarted = false;
-            IsRunning = false;
-            _stopping = false;
+            var result = await StopInternal(
+                _client, 
+                status, 
+                statusDescription,
+                _cancellation?.Token ?? CancellationToken.None,
+                false).ConfigureAwait(false);
             _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
-            return true;
+            return result;
+        }
+
+        /// <summary>
+        /// Stop/close websocket connection with custom close code.
+        /// Method could throw exceptions, but client is marked as closed anyway.
+        /// </summary>
+        /// <returns>Returns true if close was initiated successfully</returns>
+        public async Task<bool> StopOrFail(WebSocketCloseStatus status, string statusDescription)
+        {
+            var result = await StopInternal(
+                _client,
+                status,
+                statusDescription,
+                _cancellation?.Token ?? CancellationToken.None,
+                true).ConfigureAwait(false);
+            _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
+            return result;
         }
 
         private static Func<Uri, CancellationToken, Task<WebSocket>> GetClientFactory(Func<ClientWebSocket> clientFactory)
@@ -268,6 +272,45 @@ namespace Websocket.Client
             StartBackgroundThreadForSendingBinary();
         }
 
+        private async Task<bool> StopInternal(WebSocket client, WebSocketCloseStatus status, string statusDescription, 
+            CancellationToken cancellation, bool failFast)
+        {
+            var result = false;
+            if (client == null)
+            {
+                IsStarted = false;
+                IsRunning = false;
+                return false;
+            }
+
+            DeactivateLastChance();
+
+            try
+            {
+                _stopping = true;
+                await client.CloseAsync(status, statusDescription, cancellation);
+                result = true;
+            }
+            catch (Exception e)
+            {
+                Logger.Error(L($"Error while stopping client, message: '{e.Message}'"));
+
+                if (failFast)
+                {
+                    // fail fast, propagate exception
+                    throw new WebsocketException($"Failed to stop Websocket client, error: '{e.Message}'", e);
+                }
+            }
+            finally
+            {
+                IsStarted = false;
+                IsRunning = false;
+                _stopping = false;
+            }
+
+            return result;
+        }
+
         private async Task StartClient(Uri uri, CancellationToken token, ReconnectionType type, bool failFast)
         {
             DeactivateLastChance();
@@ -277,9 +320,7 @@ namespace Websocket.Client
                 _client = await _connectionFactory(uri, token).ConfigureAwait(false);
                 IsRunning = true;
                 _reconnectionSubject.OnNext(ReconnectionInfo.Create(type));
-#pragma warning disable 4014
-                Listen(_client, token);
-#pragma warning restore 4014
+                _ = Listen(_client, token);
                 _lastReceivedMsg = DateTime.UtcNow;
                 ActivateLastChance();
             }
@@ -324,42 +365,104 @@ namespace Websocket.Client
         }
 
         private async Task Listen(WebSocket client, CancellationToken token)
-        {
+        { 
             Exception causedException = null;
             try
             {
+                const int chunkSize = 1024 * 4;
+
                 do
                 {
-                    var buffer = new ArraySegment<byte>(new byte[8192]);
+                    WebSocketReceiveResult result;
+                    byte[] resultArrayWithTrailing = null;
+                    var resultArraySize = 0;
+                    MemoryStream ms = null;
 
-                    using (var ms = new MemoryStream())
+                    while (true)
                     {
-                        WebSocketReceiveResult result;
-                        do
-                        {
-                            result = await client.ReceiveAsync(buffer, token);
-                            if(buffer.Array != null)
-                                ms.Write(buffer.Array, buffer.Offset, result.Count);
-                        } while (!result.EndOfMessage);
+                        var buffer = new ArraySegment<byte>(new byte[chunkSize]);
+                        result = await client.ReceiveAsync(buffer, token);
+                        var currentChunk = buffer.Array;
+                        var currentChunkSize = result.Count;
 
-                        ms.Seek(0, SeekOrigin.Begin);
-
-                        ResponseMessage message;
-                        if (result.MessageType == WebSocketMessageType.Text)
+                        var isFirstChunk = resultArrayWithTrailing == null;
+                        if (isFirstChunk)
                         {
-                            var data = GetEncoding().GetString(ms.ToArray());
-                            message = ResponseMessage.TextMessage(data);
+                            // first chunk, use buffer 
+                            resultArraySize += currentChunkSize;
+                            resultArrayWithTrailing = currentChunk;
+                        }
+                        else if(currentChunk == null)
+                        {
+                            // weird chunk, do nothing
                         }
                         else
                         {
-                            var data = ms.ToArray();
-                            message = ResponseMessage.BinaryMessage(data);
+                            // received more chunks, lets merge them via memory stream
+
+                            if (ms == null)
+                            {
+                                // create memory stream and insert first chunk
+                                ms = new MemoryStream();
+                                ms.Write(resultArrayWithTrailing, 0, resultArraySize);
+                            }
+
+                            ms.Write(currentChunk, buffer.Offset, currentChunkSize);
                         }
 
-                        Logger.Trace(L($"Received:  {message}"));
-                        _lastReceivedMsg = DateTime.UtcNow;
-                        _messageReceivedSubject.OnNext(message);
+                        if (result.EndOfMessage)
+                        {
+                            break;
+                        }
                     }
+
+                    ms?.Seek(0, SeekOrigin.Begin);
+
+                    ResponseMessage message;
+                    if (result.MessageType == WebSocketMessageType.Text)
+                    {
+                        var data = ms != null ?
+                            GetEncoding().GetString(ms.ToArray()) :
+                            resultArrayWithTrailing != null ?
+                                GetEncoding().GetString(resultArrayWithTrailing, 0, resultArraySize) :
+                                null;
+
+                        message = ResponseMessage.TextMessage(data);
+                    }
+                    else if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        Logger.Trace(L($"Received close message"));
+                        var info = DisconnectionInfo.Create(DisconnectionType.ByServer, client, null);
+                        _disconnectedSubject.OnNext(info);
+
+                        if (info.CancelClosing)
+                        {
+                            // closing canceled, do nothing
+                            continue;
+                        }
+
+                        await StopInternal(client, WebSocketCloseStatus.NormalClosure, "Closing",
+                            token, false);
+                        return;
+                    }
+                    else
+                    {
+                        if (ms != null)
+                        {
+                            message = ResponseMessage.BinaryMessage(ms.ToArray());
+                        }
+                        else
+                        {
+                            Array.Resize(ref resultArrayWithTrailing, resultArraySize);
+                            message = ResponseMessage.BinaryMessage(resultArrayWithTrailing);
+                        }
+                    }
+
+                    ms?.Dispose();
+
+                    Logger.Trace(L($"Received:  {message}"));
+                    _lastReceivedMsg = DateTime.UtcNow;
+                    _messageReceivedSubject.OnNext(message);
 
                 } while (client.State == WebSocketState.Open && !token.IsCancellationRequested);
             }
@@ -398,9 +501,7 @@ namespace Websocket.Client
             }
 
             // listening thread is lost, we have to reconnect
-#pragma warning disable 4014
-            ReconnectSynchronized(ReconnectionType.Lost, false, causedException);
-#pragma warning restore 4014
+            _ = ReconnectSynchronized(ReconnectionType.Lost, false, causedException);
         }
 
         private Encoding GetEncoding()

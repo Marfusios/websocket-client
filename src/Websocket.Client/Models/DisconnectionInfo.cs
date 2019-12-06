@@ -51,6 +51,11 @@ namespace Websocket.Client
         /// </summary>
         public bool CancelReconnection { get; set; }
 
+        /// <summary>
+        /// Set to true if you want to cancel ongoing connection close (only when Type = ByServer)
+        /// </summary>
+        public bool CancelClosing { get; set; }
+
 
         /// <summary>
         /// Simple factory method

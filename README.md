@@ -14,6 +14,7 @@ This is a wrapper over native C# class `ClientWebSocket` with built-in reconnect
 * targeting .NET Standard 2.0 (.NET Core, Linux/MacOS compatible)
 * reactive extensions ([Rx.NET](https://github.com/Reactive-Extensions/Rx.NET))
 * integrated logging abstraction ([LibLog](https://github.com/damianh/LibLog))
+* using Channels for high performance sending queue
 
 ### Usage
 
@@ -23,9 +24,9 @@ var url = new Uri("wss://xxx");
 
 using (var client = new WebsocketClient(url))
 {
-    client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
-    client.ReconnectionHappened.Subscribe(type =>
-        Log.Information($"Reconnection happened, type: {type}"));
+    client.ReconnectTimeout = TimeSpan.FromSeconds(30);
+    client.ReconnectionHappened.Subscribe(info =>
+        Log.Information($"Reconnection happened, type: {info.Type}"));
 
     client.MessageReceived.Subscribe(msg => Log.Information($"Message received: {msg}"));
     client.Start();
@@ -62,7 +63,7 @@ var factory = new Func<ClientWebSocket>(() => new ClientWebSocket
 });
 
 var client = new WebsocketClient(url, factory);
-client.Start;
+client.Start();
 ```
 
 Also you can access current native class via `client.NativeClient`. 

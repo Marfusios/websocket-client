@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Websocket.Client</PackageId>
-    <Version>4.0.0</Version>
+    <Version>4.1.0</Version>
     <Authors>Mariusz Kotas</Authors>
     <Description>Client for websocket API with built-in reconnection and error handling</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
@@ -17,16 +17,17 @@
     <RepositoryType>Git</RepositoryType>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile> 
-    <AssemblyVersion>4.0.0.0</AssemblyVersion>
-    <FileVersion>4.0.0.0</FileVersion>
+    <AssemblyVersion>4.1.0.0</AssemblyVersion>
+    <FileVersion>4.1.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LibLog" Version="5.0.5">
+    <PackageReference Include="LibLog" Version="5.0.8">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <PackageReference Include="System.Reactive" Version="4.0.0" />
+    <PackageReference Include="System.Threading.Channels" Version="4.7.0" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Net.WebSockets;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Websocket.Client.Logging;
 
@@ -8,8 +8,16 @@ namespace Websocket.Client
 {
     public partial class WebsocketClient
     {
-        private readonly BlockingCollection<string> _messagesTextToSendQueue = new BlockingCollection<string>();
-        private readonly BlockingCollection<byte[]> _messagesBinaryToSendQueue = new BlockingCollection<byte[]>();
+        private readonly Channel<string> _messagesTextToSendQueue = Channel.CreateUnbounded<string>(new UnboundedChannelOptions()
+        {
+            SingleReader = true,
+            SingleWriter = false
+        });
+        private readonly Channel<byte[]> _messagesBinaryToSendQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions()
+        {
+            SingleReader = true,
+            SingleWriter = false
+        });
 
 
         /// <summary>
@@ -17,12 +25,11 @@ namespace Websocket.Client
         /// It inserts the message to the queue and actual sending is done on an other thread
         /// </summary>
         /// <param name="message">Text message to be sent</param>
-        public Task Send(string message)
+        public void Send(string message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            _messagesTextToSendQueue.Add(message);
-            return Task.CompletedTask;
+            _messagesTextToSendQueue.Writer.TryWrite(message);
         }
 
         /// <summary>
@@ -30,12 +37,11 @@ namespace Websocket.Client
         /// It inserts the message to the queue and actual sending is done on an other thread
         /// </summary>
         /// <param name="message">Binary message to be sent</param>
-        public Task Send(byte[] message)
+        public void Send(byte[] message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            _messagesBinaryToSendQueue.Add(message);
-            return Task.CompletedTask;
+            _messagesBinaryToSendQueue.Writer.TryWrite(message);
         }
 
         /// <summary>
@@ -81,15 +87,18 @@ namespace Websocket.Client
         {
             try
             {
-                foreach (var message in _messagesTextToSendQueue.GetConsumingEnumerable(_cancellationTotal.Token))
+                while (await _messagesTextToSendQueue.Reader.WaitToReadAsync())
                 {
-                    try
+                    while (_messagesTextToSendQueue.Reader.TryRead(out var message))
                     {
-                        await SendInternalSynchronized(message).ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(L($"Failed to send text message: '{message}'. Error: {e.Message}"));
+                        try
+                        {
+                            await SendInternalSynchronized(message).ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.Error(L($"Failed to send text message: '{message}'. Error: {e.Message}"));
+                        }
                     }
                 }
             }
@@ -119,15 +128,18 @@ namespace Websocket.Client
         {
             try
             {
-                foreach (var message in _messagesBinaryToSendQueue.GetConsumingEnumerable(_cancellationTotal.Token))
+                while (await _messagesBinaryToSendQueue.Reader.WaitToReadAsync())
                 {
-                    try
+                    while (_messagesBinaryToSendQueue.Reader.TryRead(out var message))
                     {
-                        await SendInternalSynchronized(message).ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(L($"Failed to send binary message: '{message}'. Error: {e.Message}"));
+                        try
+                        {
+                            await SendInternalSynchronized(message).ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.Error(L($"Failed to send binary message: '{message}'. Error: {e.Message}"));
+                        }
                     }
                 }
             }
@@ -155,16 +167,12 @@ namespace Websocket.Client
 
         private void StartBackgroundThreadForSendingText()
         {
-#pragma warning disable 4014
-            Task.Factory.StartNew(_ => SendTextFromQueue(), TaskCreationOptions.LongRunning, _cancellationTotal.Token);
-#pragma warning restore 4014
+            _ = Task.Factory.StartNew(_ => SendTextFromQueue(), TaskCreationOptions.LongRunning, _cancellationTotal.Token);
         }
 
         private void StartBackgroundThreadForSendingBinary()
         {
-#pragma warning disable 4014
-            Task.Factory.StartNew(_ => SendBinaryFromQueue(), TaskCreationOptions.LongRunning, _cancellationTotal.Token);
-#pragma warning restore 4014
+            _ = Task.Factory.StartNew(_ => SendBinaryFromQueue(), TaskCreationOptions.LongRunning, _cancellationTotal.Token);
         }
 
         private async Task SendInternalSynchronized(string message)

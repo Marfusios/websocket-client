@@ -73,8 +73,8 @@ namespace Websocket.Client.Tests.TestServer
             {
                 case "ping":
                     return SendResponse(webSocket, ResponseMessage.TextMessage("pong"));
-                case string echoMsg when msg.StartsWith("echo"):
-                    return SendEcho(webSocket, echoMsg);
+                case string _ when msg.StartsWith("echo"):
+                    return SendEcho(webSocket, request.Text);
             }
 
             throw new NotSupportedException($"Request: '{msg}' is not supported");

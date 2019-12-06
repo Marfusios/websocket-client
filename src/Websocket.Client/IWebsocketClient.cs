@@ -93,24 +93,31 @@ namespace Websocket.Client
 
         /// <summary>
         /// Stop/close websocket connection with custom close code.
-        /// Method could throw exceptions. 
+        /// Method doesn't throw exception, only logs it and mark client as closed. 
         /// </summary>
         /// <returns>Returns true if close was initiated successfully</returns>
         Task<bool> Stop(WebSocketCloseStatus status, string statusDescription);
+
+        /// <summary>
+        /// Stop/close websocket connection with custom close code.
+        /// Method could throw exceptions, but client is marked as closed anyway.
+        /// </summary>
+        /// <returns>Returns true if close was initiated successfully</returns>
+        Task<bool> StopOrFail(WebSocketCloseStatus status, string statusDescription);
 
         /// <summary>
         /// Send message to the websocket channel. 
         /// It inserts the message to the queue and actual sending is done on an other thread
         /// </summary>
         /// <param name="message">Message to be sent</param>
-        Task Send(string message);
+        void Send(string message);
 
         /// <summary>
         /// Send binary message to the websocket channel. 
         /// It inserts the message to the queue and actual sending is done on an other thread
         /// </summary>
         /// <param name="message">Binary message to be sent</param>
-        Task Send(byte[] message);
+        void Send(byte[] message);
 
         /// <summary>
         /// Send message to the websocket channel. 

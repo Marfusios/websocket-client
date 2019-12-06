@@ -120,9 +120,7 @@ namespace Websocket.Client
                 Logger.Debug(L($"Last message received more than {timeoutMs:F} ms ago. Hard restart.."));
 
                 DeactivateLastChance();
-#pragma warning disable 4014
-                ReconnectSynchronized(ReconnectionType.NoMessageReceived, false, null);
-#pragma warning restore 4014
+                _ = ReconnectSynchronized(ReconnectionType.NoMessageReceived, false, null);
             }
         }
     }

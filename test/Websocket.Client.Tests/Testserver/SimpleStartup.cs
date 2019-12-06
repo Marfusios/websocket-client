@@ -73,8 +73,10 @@ namespace Websocket.Client.Tests.TestServer
             {
                 case "ping":
                     return SendResponse(webSocket, ResponseMessage.TextMessage("pong"));
+                case string _ when msg.StartsWith("echo_fast"):
+                    return SendEcho(webSocket, request.Text, false);
                 case string _ when msg.StartsWith("echo"):
-                    return SendEcho(webSocket, request.Text);
+                    return SendEcho(webSocket, request.Text, true);
             }
 
             throw new NotSupportedException($"Request: '{msg}' is not supported");
@@ -151,9 +153,10 @@ namespace Websocket.Client.Tests.TestServer
         }
 
 
-        private async Task SendEcho(WebSocket webSocket, string msg)
+        private async Task SendEcho(WebSocket webSocket, string msg, bool slowdown)
         {
-            await Task.Delay(100);
+            if(slowdown)
+                await Task.Delay(100);
             await SendResponse(webSocket, ResponseMessage.TextMessage(msg));
         }
 

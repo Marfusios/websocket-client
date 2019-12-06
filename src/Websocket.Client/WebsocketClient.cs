@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -369,7 +370,9 @@ namespace Websocket.Client
             Exception causedException = null;
             try
             {
+                // define buffer here and reuse, to avoid more allocation
                 const int chunkSize = 1024 * 4;
+                var buffer = new ArraySegment<byte>(new byte[chunkSize]);
 
                 do
                 {
@@ -380,7 +383,6 @@ namespace Websocket.Client
 
                     while (true)
                     {
-                        var buffer = new ArraySegment<byte>(new byte[chunkSize]);
                         result = await client.ReceiveAsync(buffer, token);
                         var currentChunk = buffer.Array;
                         var currentChunkSize = result.Count;
@@ -388,7 +390,7 @@ namespace Websocket.Client
                         var isFirstChunk = resultArrayWithTrailing == null;
                         if (isFirstChunk)
                         {
-                            // first chunk, use buffer 
+                            // first chunk, use buffer as reference, do not allocate anything
                             resultArraySize += currentChunkSize;
                             resultArrayWithTrailing = currentChunk;
                         }
@@ -399,7 +401,6 @@ namespace Websocket.Client
                         else
                         {
                             // received more chunks, lets merge them via memory stream
-
                             if (ms == null)
                             {
                                 // create memory stream and insert first chunk
@@ -407,6 +408,7 @@ namespace Websocket.Client
                                 ms.Write(resultArrayWithTrailing, 0, resultArraySize);
                             }
 
+                            // insert current chunk
                             ms.Write(currentChunk, buffer.Offset, currentChunkSize);
                         }
 
@@ -414,6 +416,9 @@ namespace Websocket.Client
                         {
                             break;
                         }
+
+                        // we got more chunks incoming, need to clone first chunk
+                        resultArrayWithTrailing = resultArrayWithTrailing?.ToArray();
                     }
 
                     ms?.Seek(0, SeekOrigin.Begin);

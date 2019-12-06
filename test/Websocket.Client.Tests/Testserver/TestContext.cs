@@ -49,6 +49,9 @@ namespace Websocket.Client.Tests.TestServer
 
         private void InitLogging(ITestOutputHelper output)
         {
+            if (output == null)
+                return;
+
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .WriteTo.TestOutput(output, LogEventLevel.Verbose)

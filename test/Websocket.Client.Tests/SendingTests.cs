@@ -80,6 +80,8 @@ namespace Websocket.Client.Tests
                 receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
                 Assert.NotNull(received);
+                Assert.Equal(4, received.Length);
+                Assert.Equal(14, received[1]);
             }
         }
 

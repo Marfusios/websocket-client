@@ -8,6 +8,7 @@ using Xunit.Abstractions;
 
 namespace Websocket.Client.Tests
 {
+#if DEBUG
     public class PerformanceTests
     {
         private readonly TestContext<SimpleStartup> _context;
@@ -24,9 +25,8 @@ namespace Websocket.Client.Tests
         [InlineData(100)]
         [InlineData(1000)]
         [InlineData(10000)]
-#if DEBUG
+
         [InlineData(100000)]
-#endif
         public async Task SendingRequests_SmallMessages(int messageCount)
         {
             using (var client = _context.CreateClient())
@@ -80,9 +80,9 @@ namespace Websocket.Client.Tests
         [InlineData(100)]
         [InlineData(1000)]
         [InlineData(10000)]
-#if DEBUG
+
         [InlineData(100000)]
-#endif
+
         public async Task SendingRequests_LargeMessages(int messageCount)
         {
             using (var client = _context.CreateClient())
@@ -135,4 +135,5 @@ namespace Websocket.Client.Tests
             }
         }
     }
+#endif
 }

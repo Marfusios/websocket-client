@@ -187,7 +187,7 @@ namespace Websocket.Client.Tests
                 // check that reconnection is disabled
                 await Task.Delay(8000);
                 Assert.Equal(1, receivedCount);
-                Assert.Equal(2, disconnectionCount);
+                Assert.InRange(disconnectionCount, 1, 2);
                 Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
                 Assert.Equal(WebSocketCloseStatus.InternalServerError, disconnectionInfo.CloseStatus);
                 Assert.Equal("server error 500", disconnectionInfo.CloseStatusDescription);

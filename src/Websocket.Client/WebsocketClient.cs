@@ -379,6 +379,7 @@ namespace Websocket.Client
                     WebSocketReceiveResult result;
                     byte[] resultArrayWithTrailing = null;
                     var resultArraySize = 0;
+                    var isResultArrayCloned = false;
                     MemoryStream ms = null;
 
                     while (true)
@@ -393,6 +394,7 @@ namespace Websocket.Client
                             // first chunk, use buffer as reference, do not allocate anything
                             resultArraySize += currentChunkSize;
                             resultArrayWithTrailing = currentChunk;
+                            isResultArrayCloned = false;
                         }
                         else if(currentChunk == null)
                         {
@@ -417,8 +419,12 @@ namespace Websocket.Client
                             break;
                         }
 
+                        if(isResultArrayCloned)
+                            continue;
+
                         // we got more chunks incoming, need to clone first chunk
                         resultArrayWithTrailing = resultArrayWithTrailing?.ToArray();
+                        isResultArrayCloned = true;
                     }
 
                     ms?.Seek(0, SeekOrigin.Begin);

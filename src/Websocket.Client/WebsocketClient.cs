@@ -354,7 +354,7 @@ namespace Websocket.Client
 
                 var timeout = ErrorReconnectTimeout.Value;
                 Logger.Error(L($"Exception while connecting. " +
-                                  $"Waiting {timeout.Seconds} sec before next reconnection try. Error: '{e.Message}'"));
+                                  $"Waiting {timeout.TotalSeconds} sec before next reconnection try. Error: '{e.Message}'"));
                 await Task.Delay(timeout, token).ConfigureAwait(false);
                 await Reconnect(ReconnectionType.Error, false, e).ConfigureAwait(false);
             }       
@@ -494,7 +494,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                Logger.Error(e, L($"Error while listening to websocket stream, error: '{e.Message}'"));
+                Logger.Error(L($"Error while listening to websocket stream, error: '{e.Message}'"));
                 causedException = e;
             }
 

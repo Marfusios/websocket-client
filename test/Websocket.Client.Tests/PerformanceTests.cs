@@ -80,8 +80,7 @@ namespace Websocket.Client.Tests
         [InlineData(100)]
         [InlineData(1000)]
         [InlineData(10000)]
-
-        [InlineData(100000)]
+        //[InlineData(100000)]
 
         public async Task SendingRequests_LargeMessages(int messageCount)
         {

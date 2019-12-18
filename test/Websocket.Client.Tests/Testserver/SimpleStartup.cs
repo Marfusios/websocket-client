@@ -77,6 +77,8 @@ namespace Websocket.Client.Tests.TestServer
                     return SendEcho(webSocket, request.Text, false);
                 case string _ when msg.StartsWith("echo"):
                     return SendEcho(webSocket, request.Text, true);
+                case "close-me":
+                    return webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "normal closure", CancellationToken.None);
             }
 
             throw new NotSupportedException($"Request: '{msg}' is not supported");

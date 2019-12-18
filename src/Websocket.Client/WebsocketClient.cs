@@ -219,7 +219,7 @@ namespace Websocket.Client
                 status, 
                 statusDescription,
                 _cancellation?.Token ?? CancellationToken.None,
-                false).ConfigureAwait(false);
+                false, false).ConfigureAwait(false);
             _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
             return result;
         }
@@ -236,7 +236,7 @@ namespace Websocket.Client
                 status,
                 statusDescription,
                 _cancellation?.Token ?? CancellationToken.None,
-                true).ConfigureAwait(false);
+                true, false).ConfigureAwait(false);
             _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
             return result;
         }
@@ -274,7 +274,7 @@ namespace Websocket.Client
         }
 
         private async Task<bool> StopInternal(WebSocket client, WebSocketCloseStatus status, string statusDescription, 
-            CancellationToken cancellation, bool failFast)
+            CancellationToken cancellation, bool failFast, bool byServer)
         {
             var result = false;
             if (client == null)
@@ -289,7 +289,10 @@ namespace Websocket.Client
             try
             {
                 _stopping = true;
-                await client.CloseAsync(status, statusDescription, cancellation);
+                if(byServer)
+                    await client.CloseOutputAsync(status, statusDescription, cancellation);
+                else
+                    await client.CloseAsync(status, statusDescription, cancellation);
                 result = true;
             }
             catch (Exception e)
@@ -320,6 +323,7 @@ namespace Websocket.Client
             {
                 _client = await _connectionFactory(uri, token).ConfigureAwait(false);
                 IsRunning = true;
+                IsStarted = true;
                 _reconnectionSubject.OnNext(ReconnectionInfo.Create(type));
                 _ = Listen(_client, token);
                 _lastReceivedMsg = DateTime.UtcNow;
@@ -448,12 +452,24 @@ namespace Websocket.Client
 
                         if (info.CancelClosing)
                         {
-                            // closing canceled, do nothing
+                            // closing canceled, reconnect if enabled
+                            if (IsReconnectionEnabled)
+                            {
+                                throw new OperationCanceledException("Websocket connection was closed by server");
+                            }
+
                             continue;
                         }
 
                         await StopInternal(client, WebSocketCloseStatus.NormalClosure, "Closing",
-                            token, false);
+                            token, false, true);
+
+                        // reconnect if enabled
+                        if (IsReconnectionEnabled && !ShouldIgnoreReconnection(client))
+                        {
+                            _ = ReconnectSynchronized(ReconnectionType.Lost, false, null);
+                        }
+
                         return;
                     }
                     else
@@ -499,20 +515,25 @@ namespace Websocket.Client
             }
 
 
-            if (_disposing || _reconnecting || _stopping || !IsStarted)
+            if (ShouldIgnoreReconnection(client) || !IsStarted)
             {
                 // reconnection already in progress or client stopped/disposed, do nothing
-                return;
-            }
-                
-            if (client != _client)
-            {
-                // already reconnected, do nothing
                 return;
             }
 
             // listening thread is lost, we have to reconnect
             _ = ReconnectSynchronized(ReconnectionType.Lost, false, causedException);
+        }
+
+        private bool ShouldIgnoreReconnection(WebSocket client)
+        {
+            // reconnection already in progress or client stopped/ disposed,
+            var inProgress = _disposing || _reconnecting || _stopping;
+
+            // already reconnected
+            var differentClient = client != _client;
+
+            return inProgress || differentClient;
         }
 
         private Encoding GetEncoding()

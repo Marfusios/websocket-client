@@ -132,9 +132,7 @@ namespace Websocket.Client.Tests
 
             foreach (var client in clients)
             {
-#pragma warning disable 4014
                 client.Send("ping");
-#pragma warning restore 4014
             }
 
             await Task.Delay(1000);
@@ -405,6 +403,67 @@ namespace Websocket.Client.Tests
                 Assert.True(client.IsRunning);
                 Assert.True(client.IsStarted);
             }
+        }
+
+        [Fact]
+        public async Task Dispose_ShouldWorkCorrectly()
+        {
+            var client = _context.CreateClient();
+            string received = null;
+            var receivedCount = 0;
+            var disconnectionCount = 0;
+            var disconnectionType = DisconnectionType.Error;
+
+            var messageStreamCompletedCount = 0;
+            var reconnectionStreamCompletedCount = 0;
+            var disconnectionStreamCompletedCount = 0;
+
+            client
+                .MessageReceived
+                .Subscribe(msg =>
+                {
+                    _output.WriteLine($"Received: '{msg}'");
+                    receivedCount++;
+                    received = msg.Text;
+                }, () => messageStreamCompletedCount++);
+
+            client.DisconnectionHappened.Subscribe(x =>
+            {
+                disconnectionCount++;
+                disconnectionType = x.Type;
+            }, () => disconnectionStreamCompletedCount++);
+
+            client.ReconnectionHappened.Subscribe(x =>
+            {
+                // nothing
+            }, () => reconnectionStreamCompletedCount++);
+
+            await client.StartOrFail();
+
+            client.Send("ping");
+            client.Send("ping");
+            client.Send("ping");
+
+            await Task.Delay(100);
+
+            client.Dispose();
+            await Task.Delay(100);
+
+            await client.Reconnect();
+            await Task.Delay(100);
+
+            await Assert.ThrowsAsync<WebsocketException>(() => client.Start());
+            await Assert.ThrowsAsync<WebsocketException>(() => client.Stop(WebSocketCloseStatus.Empty, string.Empty));
+
+            Assert.Equal(1, messageStreamCompletedCount);
+            Assert.Equal(1, reconnectionStreamCompletedCount);
+            Assert.Equal(1, disconnectionStreamCompletedCount);
+
+            Assert.Equal(1, disconnectionCount);
+            Assert.Equal(DisconnectionType.Exit, disconnectionType);
+
+            Assert.NotNull(received);
+            Assert.Equal(3 + 1, receivedCount);
         }
     }
 }

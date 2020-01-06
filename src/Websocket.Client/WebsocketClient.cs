@@ -176,6 +176,8 @@ namespace Websocket.Client
                 _client?.Dispose();
                 _cancellation?.Dispose();
                 _cancellationTotal?.Dispose();
+                _messageReceivedSubject.OnCompleted();
+                _reconnectionSubject.OnCompleted();
             }
             catch (Exception e)
             {
@@ -185,6 +187,7 @@ namespace Websocket.Client
             IsRunning = false;
             IsStarted = false;
             _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.Exit, _client, null));
+            _disconnectedSubject.OnCompleted();
         }
 
         /// <summary>
@@ -218,8 +221,9 @@ namespace Websocket.Client
                 _client, 
                 status, 
                 statusDescription,
-                _cancellation?.Token ?? CancellationToken.None,
-                false, false).ConfigureAwait(false);
+                null,
+                false, 
+                false).ConfigureAwait(false);
             _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
             return result;
         }
@@ -235,8 +239,9 @@ namespace Websocket.Client
                 _client,
                 status,
                 statusDescription,
-                _cancellation?.Token ?? CancellationToken.None,
-                true, false).ConfigureAwait(false);
+                null,
+                true, 
+                false).ConfigureAwait(false);
             _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
             return result;
         }
@@ -255,6 +260,11 @@ namespace Websocket.Client
 
         private async Task StartInternal(bool failFast)
         {
+            if(_disposing)
+            {
+                throw new WebsocketException(L("Client is already disposed, starting not possible"));
+            }
+
             if (IsStarted)
             {
                 Logger.Debug(L("Client already started, ignoring.."));
@@ -274,8 +284,13 @@ namespace Websocket.Client
         }
 
         private async Task<bool> StopInternal(WebSocket client, WebSocketCloseStatus status, string statusDescription, 
-            CancellationToken cancellation, bool failFast, bool byServer)
+            CancellationToken? cancellation, bool failFast, bool byServer)
         {
+            if (_disposing)
+            {
+                throw new WebsocketException(L("Client is already disposed, stopping not possible"));
+            }
+
             var result = false;
             if (client == null)
             {
@@ -288,11 +303,12 @@ namespace Websocket.Client
 
             try
             {
+                var cancellationToken = cancellation ?? CancellationToken.None;
                 _stopping = true;
                 if(byServer)
-                    await client.CloseOutputAsync(status, statusDescription, cancellation);
+                    await client.CloseOutputAsync(status, statusDescription, cancellationToken);
                 else
-                    await client.CloseAsync(status, statusDescription, cancellation);
+                    await client.CloseAsync(status, statusDescription, cancellationToken);
                 result = true;
             }
             catch (Exception e)

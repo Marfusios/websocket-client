@@ -12,6 +12,7 @@
     <PackageTags>websockets websocket client</PackageTags>
     <PackageLicense>https://github.com/Marfusios/websocket-client/blob/master/LICENSE</PackageLicense>
     <PackageProjectUrl>https://github.com/Marfusios/websocket-client</PackageProjectUrl>
+    <PackageIconUrl>https://raw.githubusercontent.com/Marfusios/websocket-client/master/src/Websocket.Client/icon.png</PackageIconUrl>
     <PackageIcon>icon.png</PackageIcon>
     <RepositoryUrl>https://github.com/Marfusios/websocket-client</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>

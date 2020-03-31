@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Xunit.Abstractions;
@@ -56,6 +57,7 @@ namespace Websocket.Client.Tests.TestServer
                 .MinimumLevel.Verbose()
                 .WriteTo.TestOutput(output, LogEventLevel.Verbose)
                 .CreateLogger();
+            WebsocketClient.LoggerFactory = LoggerFactory.Create(builder => { builder.AddSerilog(Log.Logger); });
         }
     }
 }

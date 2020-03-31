@@ -286,7 +286,7 @@ namespace Websocket.Client.Tests
 
                 await Task.Delay(1000);
 
-                client.Url = new Uri("wss://google.com");
+                client.Url = new Uri($"wss://{SimpleStartup.InvalidTestHost}");
 
                 try
                 {

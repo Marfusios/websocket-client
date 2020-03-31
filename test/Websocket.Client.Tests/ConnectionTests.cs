@@ -69,7 +69,7 @@ namespace Websocket.Client.Tests
         [Fact]
         public async Task StartOrFail_InvalidServer_ShouldThrowException()
         {
-            using (var client = _context.CreateClient(new Uri("wss://google.com")))
+            using (var client = _context.CreateClient(new Uri($"wss://{SimpleStartup.InvalidTestHost}")))
             {
                 string received = null;
                 var receivedCount = 0;

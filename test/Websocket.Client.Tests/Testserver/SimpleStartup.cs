@@ -14,6 +14,8 @@ namespace Websocket.Client.Tests.TestServer
     // This is from https://github.com/aspnet/AspNetCore.Docs/blob/master/aspnetcore/fundamentals/websockets/samples/2.x/WebSocketsSample/Startup.cs
     public class SimpleStartup
     {
+        internal static string InvalidTestHost = "google.com";
+
         public void ConfigureServices(IServiceCollection services)
         {
 
@@ -26,7 +28,8 @@ namespace Websocket.Client.Tests.TestServer
             {
                 if (context.Request.Path == "/ws")
                 {
-                    if (context.WebSockets.IsWebSocketRequest)
+                    if (context.WebSockets.IsWebSocketRequest
+                        && context.Request.Host.Host != InvalidTestHost)
                     {
                         var webSocket = await context.WebSockets.AcceptWebSocketAsync();
                         await SendResponse(webSocket,

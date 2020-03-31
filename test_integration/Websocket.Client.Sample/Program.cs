@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 
@@ -46,10 +47,12 @@ namespace Websocket.Client.Sample
                 //client.Options.SetRequestHeader("Origin", "xxx");
                 return client;
             });
+            var loggerFactory = LoggerFactory.Create(builder => { builder.AddSerilog(Log.Logger); });
 
             var url = new Uri("wss://www.bitmex.com/realtime");
 
-            using (IWebsocketClient client = new WebsocketClient(url, factory))
+            using (IWebsocketClient client = new WebsocketClient(url, factory,
+                loggerFactory.CreateLogger<WebsocketClient>()))
             {
                 client.Name = "Bitmex";
                 client.ReconnectTimeout = TimeSpan.FromSeconds(30);

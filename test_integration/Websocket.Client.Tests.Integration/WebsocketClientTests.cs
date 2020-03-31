@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Xunit;
@@ -243,6 +244,7 @@ namespace Websocket.Client.Tests.Integration
                 .MinimumLevel.Verbose()
                 .WriteTo.TestOutput(output, LogEventLevel.Verbose)
                 .CreateLogger();
+            WebsocketClient.LoggerFactory = LoggerFactory.Create(builder => { builder.AddSerilog(Log.Logger); });
         }
     }
 }

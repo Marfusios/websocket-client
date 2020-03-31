@@ -8,8 +8,9 @@ using System.Reactive.Subjects;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Websocket.Client.Exceptions;
-using Websocket.Client.Logging;
 using Websocket.Client.Models;
 using Websocket.Client.Threading;
 
@@ -20,8 +21,12 @@ namespace Websocket.Client
     /// </summary>
     public partial class WebsocketClient : IWebsocketClient
     {
-        private static readonly ILog Logger = GetLogger();
+        /// <summary>
+        /// Logger factory used in case no implementation is passed to ctor
+        /// </summary>
+        public static ILoggerFactory LoggerFactory { get; set; } = new NullLoggerFactory();
 
+        private readonly ILogger _logger;
         private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();
         private readonly Func<Uri, CancellationToken, Task<WebSocket>> _connectionFactory;
 
@@ -46,8 +51,9 @@ namespace Websocket.Client
         /// </summary>
         /// <param name="url">Target websocket url (wss://)</param>
         /// <param name="clientFactory">Optional factory for native ClientWebSocket, use it whenever you need some custom features (proxy, settings, etc)</param>
-        public WebsocketClient(Uri url, Func<ClientWebSocket> clientFactory = null)
-            : this(url, GetClientFactory(clientFactory))
+        /// <param name="logger">Optional logger implementation</param>
+        public WebsocketClient(Uri url, Func<ClientWebSocket> clientFactory = null, ILogger<WebsocketClient> logger = null)
+            : this(url, GetClientFactory(clientFactory), logger)
         {
         }
 
@@ -56,11 +62,13 @@ namespace Websocket.Client
         /// </summary>
         /// <param name="url">Target websocket url (wss://)</param>
         /// <param name="connectionFactory">Optional factory for native creating and connecting to a websocket. The method should return a <see cref="WebSocket"/> which is connected. Use it whenever you need some custom features (proxy, settings, etc)</param>
-        public WebsocketClient(Uri url, Func<Uri, CancellationToken, Task<WebSocket>> connectionFactory)
+        /// <param name="logger">Optional logger implementation</param>
+        public WebsocketClient(Uri url, Func<Uri, CancellationToken, Task<WebSocket>> connectionFactory, ILogger<WebsocketClient> logger = null)
         {
             Validations.Validations.ValidateInput(url, nameof(url));
 
             _url = url;
+            _logger = logger ?? LoggerFactory.CreateLogger<WebsocketClient>();
             _connectionFactory = connectionFactory ?? (async (uri, token) =>
             {
                 var client = new ClientWebSocket
@@ -164,7 +172,7 @@ namespace Websocket.Client
         public void Dispose()
         {
             _disposing = true;
-            Logger.Debug(L("Disposing.."));
+            _logger.LogDebug(L("Disposing.."));
             try
             {
                 _messagesTextToSendQueue?.Writer.Complete();
@@ -181,7 +189,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                Logger.Error(e, L($"Failed to dispose client, error: {e.Message}"));
+                _logger.LogError(e, L($"Failed to dispose client, error: {e.Message}"));
             }
 
             IsRunning = false;
@@ -267,13 +275,13 @@ namespace Websocket.Client
 
             if (IsStarted)
             {
-                Logger.Debug(L("Client already started, ignoring.."));
+                _logger.LogDebug(L("Client already started, ignoring.."));
                 return;
             }
 
             IsStarted = true;
 
-            Logger.Debug(L("Starting.."));
+            _logger.LogDebug(L("Starting.."));
             _cancellation = new CancellationTokenSource();
             _cancellationTotal = new CancellationTokenSource();
 
@@ -313,7 +321,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                Logger.Error(L($"Error while stopping client, message: '{e.Message}'"));
+                _logger.LogError(L($"Error while stopping client, message: '{e.Message}'"));
 
                 if (failFast)
                 {
@@ -353,8 +361,8 @@ namespace Websocket.Client
                 if (info.CancelReconnection)
                 {
                     // reconnection canceled by user, do nothing
-                    Logger.Error(L($"Exception while connecting. " +
-                                      $"Reconnecting canceled by user, exiting. Error: '{e.Message}'"));
+                    _logger.LogError(L($"Exception while connecting. " +
+                                       $"Reconnecting canceled by user, exiting. Error: '{e.Message}'"));
                     return;
                 }
 
@@ -367,14 +375,14 @@ namespace Websocket.Client
 
                 if (ErrorReconnectTimeout == null)
                 {
-                    Logger.Error(L($"Exception while connecting. " +
-                                      $"Reconnecting disable, exiting. Error: '{e.Message}'"));
+                    _logger.LogError(L($"Exception while connecting. " +
+                                       $"Reconnecting disable, exiting. Error: '{e.Message}'"));
                     return;
                 }
 
                 var timeout = ErrorReconnectTimeout.Value;
-                Logger.Error(L($"Exception while connecting. " +
-                                  $"Waiting {timeout.TotalSeconds} sec before next reconnection try. Error: '{e.Message}'"));
+                _logger.LogError(L($"Exception while connecting. " +
+                                   $"Waiting {timeout.TotalSeconds} sec before next reconnection try. Error: '{e.Message}'"));
                 await Task.Delay(timeout, token).ConfigureAwait(false);
                 await Reconnect(ReconnectionType.Error, false, e).ConfigureAwait(false);
             }       
@@ -462,7 +470,7 @@ namespace Websocket.Client
                     }
                     else if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        Logger.Trace(L($"Received close message"));
+                        _logger.LogTrace(L($"Received close message"));
                         var info = DisconnectionInfo.Create(DisconnectionType.ByServer, client, null);
                         _disconnectedSubject.OnNext(info);
 
@@ -503,7 +511,7 @@ namespace Websocket.Client
 
                     ms?.Dispose();
 
-                    Logger.Trace(L($"Received:  {message}"));
+                    _logger.LogTrace(L($"Received:  {message}"));
                     _lastReceivedMsg = DateTime.UtcNow;
                     _messageReceivedSubject.OnNext(message);
 
@@ -526,7 +534,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                Logger.Error(L($"Error while listening to websocket stream, error: '{e.Message}'"));
+                _logger.LogError(L($"Error while listening to websocket stream, error: '{e.Message}'"));
                 causedException = e;
             }
 
@@ -574,20 +582,6 @@ namespace Websocket.Client
         {
             var name = Name ?? "CLIENT";
             return $"[WEBSOCKET {name}] {msg}";
-        }
-
-        private static ILog GetLogger()
-        {
-            try
-            {
-                return LogProvider.GetCurrentClassLogger();
-            }
-            catch (Exception e)
-            {
-                Trace.WriteLine($"[WEBSOCKET] Failed to initialize logger, disabling.. " +
-                                $"Error: {e}");
-                return LogProvider.NoOpLogger.Instance;
-            }
         }
 
         private DisconnectionType TranslateTypeToDisconnection(ReconnectionType type)

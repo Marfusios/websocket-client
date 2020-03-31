@@ -2,7 +2,7 @@
 using System.Net.WebSockets;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using Websocket.Client.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Websocket.Client
 {
@@ -97,7 +97,7 @@ namespace Websocket.Client
                         }
                         catch (Exception e)
                         {
-                            Logger.Error(L($"Failed to send text message: '{message}'. Error: {e.Message}"));
+                            _logger.LogError(L($"Failed to send text message: '{message}'. Error: {e.Message}"));
                         }
                     }
                 }
@@ -118,7 +118,7 @@ namespace Websocket.Client
                     return;
                 }
 
-                Logger.Trace(L($"Sending text thread failed, error: {e.Message}. Creating a new sending thread."));
+                _logger.LogTrace(L($"Sending text thread failed, error: {e.Message}. Creating a new sending thread."));
                 StartBackgroundThreadForSendingText();
             }
 
@@ -138,7 +138,7 @@ namespace Websocket.Client
                         }
                         catch (Exception e)
                         {
-                            Logger.Error(L($"Failed to send binary message: '{message}'. Error: {e.Message}"));
+                            _logger.LogError(L($"Failed to send binary message: '{message}'. Error: {e.Message}"));
                         }
                     }
                 }
@@ -159,7 +159,7 @@ namespace Websocket.Client
                     return;
                 }
 
-                Logger.Trace(L($"Sending binary thread failed, error: {e.Message}. Creating a new sending thread."));
+                _logger.LogTrace(L($"Sending binary thread failed, error: {e.Message}. Creating a new sending thread."));
                 StartBackgroundThreadForSendingBinary();
             }
 
@@ -187,11 +187,11 @@ namespace Websocket.Client
         {
             if (!IsClientConnected())
             {
-                Logger.Debug(L($"Client is not connected to server, cannot send:  {message}"));
+                _logger.LogDebug(L($"Client is not connected to server, cannot send:  {message}"));
                 return;
             }
 
-            Logger.Trace(L($"Sending:  {message}"));
+            _logger.LogTrace(L($"Sending:  {message}"));
             var buffer = GetEncoding().GetBytes(message);
             var messageSegment = new ArraySegment<byte>(buffer);
             await _client
@@ -211,11 +211,11 @@ namespace Websocket.Client
         {
             if (!IsClientConnected())
             {
-                Logger.Debug(L($"Client is not connected to server, cannot send binary, length: {message.Length}"));
+                _logger.LogDebug(L($"Client is not connected to server, cannot send binary, length: {message.Length}"));
                 return;
             }
 
-            Logger.Trace(L($"Sending binary, length: {message.Length}"));
+            _logger.LogTrace(L($"Sending binary, length: {message.Length}"));
 
             await _client
                 .SendAsync(new ArraySegment<byte>(message), WebSocketMessageType.Binary, true, _cancellation.Token)

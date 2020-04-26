@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.TestHost;
 using Serilog;
 using Serilog.Events;
@@ -45,6 +44,17 @@ namespace Websocket.Client.Tests.TestServer
                     //await Task.Delay(1000, token);
                     return ws;
                 });
+        }
+
+        public IWebsocketClient CreateInvalidClient(Uri serverUrl)
+        {
+            var wsUri = new UriBuilder(serverUrl)
+            {
+                Scheme = "ws",
+                Path = "ws"
+            }.Uri;
+            return new WebsocketClient(wsUri,
+                (uri, token) => throw new InvalidOperationException("Connection to websocket server failed, check url"));
         }
 
         private void InitLogging(ITestOutputHelper output)

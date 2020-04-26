@@ -92,7 +92,7 @@ namespace Websocket.Client.Tests.Integration
                 client.MessageReceived.Subscribe(msg =>
                 {
                     var msgText = msg.Text ?? string.Empty;
-                    if (msgText.Contains("Unrecognized request"))
+                    if (msgText.Contains("400"))
                     {
                         received = msgText;
                         receivedEvent.Set();

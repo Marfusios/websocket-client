@@ -58,7 +58,7 @@ namespace Websocket.Client.Sample
                 {
                     Log.Information($"Reconnection happened, type: {type}, url: {client.Url}");
                 });
-                client.DisconnectionHappened.Subscribe(info => 
+                client.DisconnectionHappened.Subscribe(info =>
                     Log.Warning($"Disconnection happened, type: {info.Type}"));
 
                 client.MessageReceived.Subscribe(msg =>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Websocket.Client.Exceptions;
@@ -126,6 +127,45 @@ namespace Websocket.Client.Tests
                 Assert.Equal(3, receivedCount);
                 Assert.Equal(1024 * 9 + 5, received.Length);
                 Assert.StartsWith("echo:BBBB", received);
+            }
+        }
+
+        [Fact]
+        public async Task IsTextMessageConversionEnabled_False_ShouldReceiveStringMessageAsBinary()
+        {
+            using (var client = _context.CreateClient())
+            {
+                client.IsTextMessageConversionEnabled = false;
+
+                ResponseMessage received = null;
+                var receivedCount = 0;
+                var receivedEvent = new ManualResetEvent(false);
+
+                client
+                    .MessageReceived
+                    .Subscribe(msg =>
+                    {
+                        receivedCount++;
+                        received = msg;
+
+                        if (receivedCount > 1)
+                            receivedEvent.Set();
+                    });
+
+                await client.Start();
+
+                var sign = 'C';
+                var msg = new string(sign, 1024 * 9);
+                client.Send($"echo:{msg}");
+
+                receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+
+                Assert.NotNull(received);
+                Assert.Equal(WebSocketMessageType.Binary, received.MessageType);
+                Assert.NotNull(received.Binary);
+                Assert.Null(received.Text);
+                Assert.Equal(2, receivedCount);
+                Assert.Equal(1024 * 9 + 5, received.Binary.Length);
             }
         }
     }

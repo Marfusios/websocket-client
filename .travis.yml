@@ -14,6 +14,6 @@ deploy:
   provider: script
   skip_cleanup: true
   script:
-    - cd src/Websocket.Client && dotnet pack /p:PackageVersion=4.2.$TRAVIS_BUILD_NUMBER -c Release && cd bin/Release && dotnet nuget push **/*.4.2.$TRAVIS_BUILD_NUMBER.nupkg -k $NUGET_API_KEY -s https://api.nuget.org/v3/index.json
+    - cd src/Websocket.Client && dotnet pack /p:PackageVersion=4.3.$TRAVIS_BUILD_NUMBER -c Release && cd bin/Release && dotnet nuget push **/*.4.3.$TRAVIS_BUILD_NUMBER.nupkg -k $NUGET_API_KEY -s https://api.nuget.org/v3/index.json
   on:
     branch: master

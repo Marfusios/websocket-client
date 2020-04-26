@@ -271,7 +271,7 @@ namespace Websocket.Client.Tests
 
                 client.ReconnectionHappened.Subscribe(x =>
                 {
-                    _output.WriteLine($"Reconnected: '{x}'");
+                    _output.WriteLine($"Reconnected: '{x.Type}'");
                     reconnectedCount++;
                     lastReconnectionType = x.Type;
                 });
@@ -337,7 +337,7 @@ namespace Websocket.Client.Tests
 
                 client.ReconnectionHappened.Subscribe(x =>
                 {
-                    _output.WriteLine($"Reconnected: '{x}'");
+                    _output.WriteLine($"Reconnected: '{x.Type}'");
                     reconnectedCount++;
                     lastReconnectionType = x.Type;
                 });

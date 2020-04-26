@@ -152,6 +152,12 @@ namespace Websocket.Client
         /// </summary>
         public bool IsRunning { get; private set; }
 
+        /// <summary>
+        /// Enable or disable text message conversion from binary to string (via 'MessageEncoding' property).
+        /// Default: true
+        /// </summary>
+        public bool IsTextMessageConversionEnabled { get; set; } = true;
+
         /// <inheritdoc />
         public Encoding MessageEncoding { get; set; }
 
@@ -450,7 +456,7 @@ namespace Websocket.Client
                     ms?.Seek(0, SeekOrigin.Begin);
 
                     ResponseMessage message;
-                    if (result.MessageType == WebSocketMessageType.Text)
+                    if (result.MessageType == WebSocketMessageType.Text && IsTextMessageConversionEnabled)
                     {
                         var data = ms != null ?
                             GetEncoding().GetString(ms.ToArray()) :

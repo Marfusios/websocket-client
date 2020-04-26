@@ -164,7 +164,7 @@ namespace Websocket.Client.Tests
 
                 client.ReconnectionHappened.Subscribe(x =>
                 {
-                    _output.WriteLine($"Reconnected: '{x}'");
+                    _output.WriteLine($"Reconnected: '{x.Type}'");
                     reconnectedCount++;
                     lastReconnectionType = x.Type;
                 });
@@ -212,7 +212,7 @@ namespace Websocket.Client.Tests
 
                 client.ReconnectionHappened.Subscribe(x =>
                 {
-                    _output.WriteLine($"Reconnected: '{x}'");
+                    _output.WriteLine($"Reconnected: '{x.Type}'");
                     reconnectedCount++;
                     lastReconnectionType = x.Type;
                 });
@@ -232,11 +232,11 @@ namespace Websocket.Client.Tests
                 await client.ReconnectOrFail();
 
                 await Task.Delay(1000);
-                _ = client.ReconnectOrFail();
-                _ = client.Reconnect();
-                _ = client.ReconnectOrFail();
+                await client.ReconnectOrFail();
+                await client.Reconnect();
+                await client.ReconnectOrFail();
 
-                await Task.Delay(2000);
+                await Task.Delay(4000);
 
                 _output.WriteLine($"Received message {receivedCount} times and reconnected {receivedCount} times, " +
                                   $"last: {lastReconnectionType}");

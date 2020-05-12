@@ -319,7 +319,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                Logger.Error(L($"Error while stopping client, message: '{e.Message}'"));
+                Logger.Error(e, L($"Error while stopping client, message: '{e.Message}'"));
 
                 if (failFast)
                 {
@@ -359,7 +359,7 @@ namespace Websocket.Client
                 if (info.CancelReconnection)
                 {
                     // reconnection canceled by user, do nothing
-                    Logger.Error(L($"Exception while connecting. " +
+                    Logger.Error(e, L($"Exception while connecting. " +
                                       $"Reconnecting canceled by user, exiting. Error: '{e.Message}'"));
                     return;
                 }
@@ -373,13 +373,13 @@ namespace Websocket.Client
 
                 if (ErrorReconnectTimeout == null)
                 {
-                    Logger.Error(L($"Exception while connecting. " +
+                    Logger.Error(e, L($"Exception while connecting. " +
                                       $"Reconnecting disable, exiting. Error: '{e.Message}'"));
                     return;
                 }
 
                 var timeout = ErrorReconnectTimeout.Value;
-                Logger.Error(L($"Exception while connecting. " +
+                Logger.Error(e, L($"Exception while connecting. " +
                                   $"Waiting {timeout.TotalSeconds} sec before next reconnection try. Error: '{e.Message}'"));
                 await Task.Delay(timeout, token).ConfigureAwait(false);
                 await Reconnect(ReconnectionType.Error, false, e).ConfigureAwait(false);
@@ -532,7 +532,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                Logger.Error(L($"Error while listening to websocket stream, error: '{e.Message}'"));
+                Logger.Error(e, L($"Error while listening to websocket stream, error: '{e.Message}'"));
                 causedException = e;
             }
 

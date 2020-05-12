@@ -97,7 +97,7 @@ namespace Websocket.Client
                         }
                         catch (Exception e)
                         {
-                            Logger.Error(L($"Failed to send text message: '{message}'. Error: {e.Message}"));
+                            Logger.Error(e, L($"Failed to send text message: '{message}'. Error: {e.Message}"));
                         }
                     }
                 }
@@ -138,7 +138,7 @@ namespace Websocket.Client
                         }
                         catch (Exception e)
                         {
-                            Logger.Error(L($"Failed to send binary message: '{message}'. Error: {e.Message}"));
+                            Logger.Error(e, L($"Failed to send binary message: '{message}'. Error: {e.Message}"));
                         }
                     }
                 }

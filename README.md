@@ -90,12 +90,14 @@ Every subscription code is called on a main websocket thread. Every subscription
 ```csharp
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("{"))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("{"))
     .Subscribe(obj => { code1 });
 
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("["))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("["))
     .Subscribe(arr => { code2 });
 
 // 'code1' and 'code2' are called in a correct order, according to websocket flow
@@ -110,13 +112,15 @@ Every single subscription code is called on a separate thread. Every single subs
 ```csharp
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("{"))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("{"))
     .ObserveOn(TaskPoolScheduler.Default)
     .Subscribe(obj => { code1 });
 
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("["))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("["))
     .ObserveOn(TaskPoolScheduler.Default)
     .Subscribe(arr => { code2 });
 
@@ -133,14 +137,16 @@ In case you want to run your subscription code on the separate thread but still 
 private static readonly object GATE1 = new object();
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("{"))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("{"))
     .ObserveOn(TaskPoolScheduler.Default)
     .Synchronize(GATE1)
     .Subscribe(obj => { code1 });
 
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("["))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("["))
     .ObserveOn(TaskPoolScheduler.Default)
     .Synchronize(GATE1)
     .Subscribe(arr => { code2 });

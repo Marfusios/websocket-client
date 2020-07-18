@@ -297,6 +297,13 @@ namespace Websocket.Client
                 throw new WebsocketException(L("Client is already disposed, stopping not possible"));
             }
 
+            if(!IsRunning)
+            {
+                Logger.Info(L("Client is already stopped"));
+
+                return false;
+            }
+
             var result = false;
             if (client == null)
             {

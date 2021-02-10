@@ -476,6 +476,12 @@ namespace Websocket.Client
                     else if (result.MessageType == WebSocketMessageType.Close)
                     {
                         Logger.Trace(L($"Received close message"));
+
+                        if(!IsStarted || _stopping)
+                        {
+                            return;
+                        }
+
                         var info = DisconnectionInfo.Create(DisconnectionType.ByServer, client, null);
                         _disconnectedSubject.OnNext(info);
 

@@ -405,6 +405,55 @@ namespace Websocket.Client.Tests
             }
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Stopping_ByUser_NormalClosure_ShouldntTriggerReconnect(bool reconnectionEnabled)
+        {
+            using (var client = _context.CreateClient())
+            {
+                // independently of this config, if it is a normal expected closure by User, it shouldn't reconnect
+                client.IsReconnectionEnabled = reconnectionEnabled;
+                client.ReconnectTimeout = TimeSpan.FromSeconds(7);
+
+                var reconnectionCount = 0;
+                var disconnectionCount = 0;
+
+                DisconnectionInfo disconnectionInfo = null;
+
+                client.DisconnectionHappened.Subscribe(x =>
+                {
+                    disconnectionCount++;
+                    disconnectionInfo = x;
+                });
+
+                client.ReconnectionHappened.Subscribe(x =>
+                {
+                    if (x.Type != ReconnectionType.Initial)
+                    {
+                        reconnectionCount++;
+                    }
+                });
+
+                await client.Start();
+
+                client.Send("ping");
+
+                await client.Stop(WebSocketCloseStatus.NormalClosure, "Expected Closure");
+
+                // give some time to receive disconnection and reconnection messages
+                await Task.Delay(5000);
+
+                Assert.Equal(1, disconnectionCount);
+                Assert.Equal(0, reconnectionCount);
+                Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
+                Assert.Equal(WebSocketCloseStatus.NormalClosure, disconnectionInfo.CloseStatus);
+                Assert.Equal("Expected Closure", disconnectionInfo.CloseStatusDescription);
+                Assert.False(client.IsRunning);
+                Assert.False(client.IsStarted);
+            }
+        }
+
         [Fact]
         public async Task Dispose_ShouldWorkCorrectly()
         {

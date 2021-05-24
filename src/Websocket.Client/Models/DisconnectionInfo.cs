@@ -31,7 +31,7 @@ namespace Websocket.Client
         public WebSocketCloseStatus? CloseStatus { get; }
 
         /// <summary>
-        /// Allows the remote endpoint to describe the reason whe the connection was closed 
+        /// Allows the remote endpoint to describe the reason why the connection was closed 
         /// </summary>
         public string CloseStatusDescription { get; }
 

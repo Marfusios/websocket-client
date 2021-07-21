@@ -226,7 +226,7 @@ namespace Websocket.Client.Tests.Integration
                 Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
                 Assert.Equal(WebSocketCloseStatus.InternalServerError, disconnectionInfo.CloseStatus);
                 Assert.Equal("server error 500", disconnectionInfo.CloseStatusDescription);
-                Assert.Equal(WebSocketState.Aborted, nativeClient.State);
+                Assert.Equal(WebSocketState.Closed, nativeClient.State);
                 Assert.Equal(WebSocketCloseStatus.InternalServerError, nativeClient.CloseStatus);
                 Assert.Equal("server error 500", nativeClient.CloseStatusDescription);
 

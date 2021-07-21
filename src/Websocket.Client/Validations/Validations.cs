@@ -13,7 +13,7 @@ namespace Websocket.Client.Validations
         /// <param name="name">Input parameter name</param>
         public static void ValidateInput(string value, string name)
         {
-            if (string.IsNullOrWhiteSpace(value))
+            if (string.IsNullOrEmpty(value))
             {
                 throw new WebsocketBadInputException($"Input string parameter '{name}' is null or empty. Please correct it.");
             }

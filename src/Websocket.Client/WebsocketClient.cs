@@ -351,10 +351,10 @@ namespace Websocket.Client
             try
             {
                 _client = await _connectionFactory(uri, token).ConfigureAwait(false);
+                _ = Listen(_client, token);
                 IsRunning = true;
                 IsStarted = true;
                 _reconnectionSubject.OnNext(ReconnectionInfo.Create(type));
-                _ = Listen(_client, token);
                 _lastReceivedMsg = DateTime.UtcNow;
                 ActivateLastChance();
             }

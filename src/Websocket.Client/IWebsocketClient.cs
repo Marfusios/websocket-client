@@ -126,6 +126,13 @@ namespace Websocket.Client
         void Send(byte[] message);
 
         /// <summary>
+        /// Send binary message to the websocket channel. 
+        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// </summary>
+        /// <param name="message">Binary message to be sent</param>
+        void Send(ArraySegment<byte> message);
+
+        /// <summary>
         /// Send message to the websocket channel. 
         /// It doesn't use a sending queue, 
         /// beware of issue while sending two messages in the exact same time 

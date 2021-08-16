@@ -49,7 +49,7 @@ namespace Websocket.Client
         /// It inserts the message to the queue and actual sending is done on an other thread
         /// </summary>
         /// <param name="message">Binary message to be sent</param>
-        public void Send(ref ArraySegment<byte> message)
+        public void Send(ArraySegment<byte> message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 

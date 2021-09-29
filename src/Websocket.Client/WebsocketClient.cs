@@ -24,7 +24,7 @@ namespace Websocket.Client
         /// <summary>
         /// Logger factory used in case no implementation is passed to ctor
         /// </summary>
-        public static ILoggerFactory LoggerFactory { get; set; } = new NullLoggerFactory();
+        private static readonly ILoggerFactory LoggerFactory = new NullLoggerFactory();
 
         private readonly ILogger _logger;
         private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();

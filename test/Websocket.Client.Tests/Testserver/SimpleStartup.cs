@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,7 +18,7 @@ namespace Websocket.Client.Tests.TestServer
 
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app)
         {
             app.UseWebSockets();
             app.Use(async (context, next) =>
@@ -73,9 +72,9 @@ namespace Websocket.Client.Tests.TestServer
             {
                 case "ping":
                     return SendResponse(webSocket, ResponseMessage.TextMessage("pong"));
-                case string _ when msg.StartsWith("echo_fast"):
+                case not null when msg.StartsWith("echo_fast"):
                     return SendEcho(webSocket, request.Text, false);
-                case string _ when msg.StartsWith("echo"):
+                case not null when msg.StartsWith("echo"):
                     return SendEcho(webSocket, request.Text, true);
                 case "close-me":
                     return webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "normal closure", CancellationToken.None);
@@ -145,7 +144,6 @@ namespace Websocket.Client.Tests.TestServer
                     message.MessageType,
                     true,
                     CancellationToken.None);
-                return;
             }
         }
 

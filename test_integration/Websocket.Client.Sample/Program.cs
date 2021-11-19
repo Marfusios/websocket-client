@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 using Serilog.Events;
-
+using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Websocket.Client.Sample
 {
@@ -117,7 +117,8 @@ namespace Websocket.Client.Sample
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-                .WriteTo.ColoredConsole(LogEventLevel.Verbose, 
+                .WriteTo.Console(LogEventLevel.Verbose, 
+                    theme: AnsiConsoleTheme.Literate,
                     outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message} {NewLine}{Exception}")
                 .CreateLogger();
         }

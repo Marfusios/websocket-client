@@ -205,9 +205,7 @@ namespace Websocket.Client.Tests.Integration
 
                 await client.Start();
 
-#pragma warning disable 4014
-                Task.Run(async () =>
-#pragma warning restore 4014
+                _ = Task.Run(async () =>
                 {
                     await Task.Delay(2000);
                     var success = await client.Stop(WebSocketCloseStatus.InternalServerError, "server error 500");

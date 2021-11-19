@@ -381,7 +381,7 @@ namespace Websocket.Client
                 if (ErrorReconnectTimeout == null)
                 {
                     Logger.Error(e, L($"Exception while connecting. " +
-                                      $"Reconnecting disable, exiting. Error: '{e.Message}'"));
+                                      $"Reconnecting disabled, exiting. Error: '{e.Message}'"));
                     return;
                 }
 

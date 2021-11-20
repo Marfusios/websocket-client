@@ -11,7 +11,7 @@ This is a wrapper over native C# class `ClientWebSocket` with built-in reconnect
 ### Features
 
 * installation via NuGet ([Websocket.Client](https://www.nuget.org/packages/Websocket.Client))
-* targeting .NET Standard 2.0 (.NET Core, Linux/MacOS compatible)
+* targeting .NET Standard 2.0 (.NET Core, Linux/MacOS compatible) + Standard 2.1, .NET 5 and .NET 6
 * reactive extensions ([Rx.NET](https://github.com/Reactive-Extensions/Rx.NET))
 * integrated logging abstraction ([LibLog](https://github.com/damianh/LibLog))
 * using Channels for high performance sending queue
@@ -39,8 +39,9 @@ using (var client = new WebsocketClient(url))
 
 More usage examples:
 * integration tests ([link](test_integration/Websocket.Client.Tests.Integration))
-
 * console sample ([link](test_integration/Websocket.Client.Sample/Program.cs))
+* .net framework sample ([link](test_integration/Websocket.Client.Sample.NetFramework))
+* blazor sample ([link](test_integration/Websocket.Client.Sample.Blazor))
 
 
 **Pull Requests are welcome!**

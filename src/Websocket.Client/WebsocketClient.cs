@@ -63,10 +63,11 @@ namespace Websocket.Client
             _url = url;
             _connectionFactory = connectionFactory ?? (async (uri, token) =>
             {
-                var client = new ClientWebSocket
-                {
-                    Options = { KeepAliveInterval = new TimeSpan(0, 0, 5, 0) }
-                };
+                //var client = new ClientWebSocket
+                //{
+                //    Options = { KeepAliveInterval = new TimeSpan(0, 0, 5, 0) }
+                //};
+                var client = new ClientWebSocket();
                 await client.ConnectAsync(uri, token).ConfigureAwait(false);
                 return client;
             }); 

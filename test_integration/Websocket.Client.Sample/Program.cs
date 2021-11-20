@@ -54,9 +54,9 @@ namespace Websocket.Client.Sample
                 client.Name = "Bitmex";
                 client.ReconnectTimeout = TimeSpan.FromSeconds(30);
                 client.ErrorReconnectTimeout = TimeSpan.FromSeconds(30);
-                client.ReconnectionHappened.Subscribe(type =>
+                client.ReconnectionHappened.Subscribe(info =>
                 {
-                    Log.Information($"Reconnection happened, type: {type}, url: {client.Url}");
+                    Log.Information($"Reconnection happened, type: {info.Type}, url: {client.Url}");
                 });
                 client.DisconnectionHappened.Subscribe(info =>
                     Log.Warning($"Disconnection happened, type: {info.Type}"));

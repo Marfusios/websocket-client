@@ -10,6 +10,8 @@ namespace Websocket.Client.Tests.TestServer
     public class TestContext<TStartup> where TStartup : class
     {
         private readonly TestServerApplicationFactory<TStartup> _factory;
+        private static ILoggerFactory _loggerFactory;
+        private static ILogger<WebsocketClient> _logger;
 
         public TestContext(ITestOutputHelper output)
         {
@@ -44,7 +46,7 @@ namespace Websocket.Client.Tests.TestServer
                     var ws = await NativeTestClient.ConnectAsync(uri, token).ConfigureAwait(false);
                     //await Task.Delay(1000, token);
                     return ws;
-                });
+                }, logger: _logger);
         }
 
         public IWebsocketClient CreateInvalidClient(Uri serverUrl)
@@ -55,7 +57,8 @@ namespace Websocket.Client.Tests.TestServer
                 Path = "ws"
             }.Uri;
             return new WebsocketClient(wsUri,
-                (uri, token) => throw new InvalidOperationException("Connection to websocket server failed, check url"));
+                (uri, token) => throw new InvalidOperationException("Connection to websocket server failed, check url"),
+				logger: _logger);
         }
 
         private void InitLogging(ITestOutputHelper output)
@@ -67,7 +70,8 @@ namespace Websocket.Client.Tests.TestServer
                 .MinimumLevel.Verbose()
                 .WriteTo.TestOutput(output, LogEventLevel.Verbose)
                 .CreateLogger();
-            WebsocketClient.LoggerFactory = LoggerFactory.Create(builder => { builder.AddSerilog(Log.Logger); });
+            _loggerFactory = LoggerFactory.Create(builder => { builder.AddSerilog(Log.Logger); });
+            _logger = _loggerFactory.CreateLogger<WebsocketClient>();
         }
     }
 }

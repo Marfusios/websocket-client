@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+	<PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
     <PackageReference Include="Serilog.Sinks.XUnit" Version="2.0.4" />
     <PackageReference Include="xunit" Version="2.4.1" />

@@ -66,14 +66,20 @@ namespace Websocket.Client
         bool IsReconnectionEnabled { get; set; }
 
         /// <summary>
+        /// Enable or disable text message conversion from binary to string (via 'MessageEncoding' property).
+        /// Default: true
+        /// </summary>
+        bool IsTextMessageConversionEnabled { get; set; }
+
+        /// <summary>
         /// Returns currently used native websocket client.
         /// Use with caution, on every reconnection there will be a new instance. 
         /// </summary>
         ClientWebSocket NativeClient { get; }
 
         /// <summary>
-        /// Sets used encoding for sending and receiving text messages.
-        /// Default is UTF8
+        /// Sets used encoding for sending and receiving text messages. 
+        /// Default: UTF8
         /// </summary>
         Encoding MessageEncoding { get; set; }
 
@@ -118,6 +124,13 @@ namespace Websocket.Client
         /// </summary>
         /// <param name="message">Binary message to be sent</param>
         void Send(byte[] message);
+
+        /// <summary>
+        /// Send binary message to the websocket channel. 
+        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// </summary>
+        /// <param name="message">Binary message to be sent</param>
+        void Send(ArraySegment<byte> message);
 
         /// <summary>
         /// Send message to the websocket channel. 

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
-
+using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Websocket.Client.Sample
 {
@@ -57,11 +57,11 @@ namespace Websocket.Client.Sample
                 client.Name = "Bitmex";
                 client.ReconnectTimeout = TimeSpan.FromSeconds(30);
                 client.ErrorReconnectTimeout = TimeSpan.FromSeconds(30);
-                client.ReconnectionHappened.Subscribe(type =>
+                client.ReconnectionHappened.Subscribe(info =>
                 {
-                    Log.Information($"Reconnection happened, type: {type}, url: {client.Url}");
+                    Log.Information($"Reconnection happened, type: {info.Type}, url: {client.Url}");
                 });
-                client.DisconnectionHappened.Subscribe(info => 
+                client.DisconnectionHappened.Subscribe(info =>
                     Log.Warning($"Disconnection happened, type: {info.Type}"));
 
                 client.MessageReceived.Subscribe(msg =>
@@ -120,7 +120,8 @@ namespace Websocket.Client.Sample
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-                .WriteTo.ColoredConsole(LogEventLevel.Verbose, 
+                .WriteTo.Console(LogEventLevel.Verbose, 
+                    theme: AnsiConsoleTheme.Literate,
                     outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message} {NewLine}{Exception}")
                 .CreateLogger();
         }

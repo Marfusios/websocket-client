@@ -71,10 +71,11 @@ namespace Websocket.Client
             _logger = logger ?? LoggerFactory.CreateLogger<WebsocketClient>();
             _connectionFactory = connectionFactory ?? (async (uri, token) =>
             {
-                var client = new ClientWebSocket
-                {
-                    Options = { KeepAliveInterval = new TimeSpan(0, 0, 5, 0) }
-                };
+                //var client = new ClientWebSocket
+                //{
+                //    Options = { KeepAliveInterval = new TimeSpan(0, 0, 5, 0) }
+                //};
+                var client = new ClientWebSocket();
                 await client.ConnectAsync(uri, token).ConfigureAwait(false);
                 return client;
             }); 
@@ -159,6 +160,12 @@ namespace Websocket.Client
         /// Returns true if client is running and connected to the server
         /// </summary>
         public bool IsRunning { get; private set; }
+
+        /// <summary>
+        /// Enable or disable text message conversion from binary to string (via 'MessageEncoding' property).
+        /// Default: true
+        /// </summary>
+        public bool IsTextMessageConversionEnabled { get; set; } = true;
 
         /// <inheritdoc />
         public Encoding MessageEncoding { get; set; }
@@ -299,6 +306,13 @@ namespace Websocket.Client
                 throw new WebsocketException(L("Client is already disposed, stopping not possible"));
             }
 
+            if(!IsRunning)
+            {
+                _logger.LogInformation(L("Client is already stopped"));
+
+                return false;
+            }
+
             var result = false;
             if (client == null)
             {
@@ -321,7 +335,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                _logger.LogError(L($"Error while stopping client, message: '{e.Message}'"));
+                _logger.LogError(e, L($"Error while stopping client, message: '{e.Message}'"));
 
                 if (failFast)
                 {
@@ -346,10 +360,10 @@ namespace Websocket.Client
             try
             {
                 _client = await _connectionFactory(uri, token).ConfigureAwait(false);
+                _ = Listen(_client, token);
                 IsRunning = true;
                 IsStarted = true;
                 _reconnectionSubject.OnNext(ReconnectionInfo.Create(type));
-                _ = Listen(_client, token);
                 _lastReceivedMsg = DateTime.UtcNow;
                 ActivateLastChance();
             }
@@ -361,7 +375,7 @@ namespace Websocket.Client
                 if (info.CancelReconnection)
                 {
                     // reconnection canceled by user, do nothing
-                    _logger.LogError(L($"Exception while connecting. " +
+                    _logger.LogError(e, L($"Exception while connecting. " +
                                        $"Reconnecting canceled by user, exiting. Error: '{e.Message}'"));
                     return;
                 }
@@ -375,14 +389,14 @@ namespace Websocket.Client
 
                 if (ErrorReconnectTimeout == null)
                 {
-                    _logger.LogError(L($"Exception while connecting. " +
-                                       $"Reconnecting disable, exiting. Error: '{e.Message}'"));
+                    _logger.LogError(e, L($"Exception while connecting. " +
+                                          $"Reconnecting disable, exiting. Error: '{e.Message}'"));
                     return;
                 }
 
                 var timeout = ErrorReconnectTimeout.Value;
-                _logger.LogError(L($"Exception while connecting. " +
-                                   $"Waiting {timeout.TotalSeconds} sec before next reconnection try. Error: '{e.Message}'"));
+                _logger.LogError(e, L($"Exception while connecting. " +
+                                      $"Waiting {timeout.TotalSeconds} sec before next reconnection try. Error: '{e.Message}'"));
                 await Task.Delay(timeout, token).ConfigureAwait(false);
                 await Reconnect(ReconnectionType.Error, false, e).ConfigureAwait(false);
             }       
@@ -458,7 +472,7 @@ namespace Websocket.Client
                     ms?.Seek(0, SeekOrigin.Begin);
 
                     ResponseMessage message;
-                    if (result.MessageType == WebSocketMessageType.Text)
+                    if (result.MessageType == WebSocketMessageType.Text && IsTextMessageConversionEnabled)
                     {
                         var data = ms != null ?
                             GetEncoding().GetString(ms.ToArray()) :
@@ -471,6 +485,12 @@ namespace Websocket.Client
                     else if (result.MessageType == WebSocketMessageType.Close)
                     {
                         _logger.LogTrace(L($"Received close message"));
+
+                        if (!IsStarted || _stopping)
+                        {
+                            return;
+                        }
+
                         var info = DisconnectionInfo.Create(DisconnectionType.ByServer, client, null);
                         _disconnectedSubject.OnNext(info);
 
@@ -534,7 +554,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
-                _logger.LogError(L($"Error while listening to websocket stream, error: '{e.Message}'"));
+                _logger.LogError(e, L($"Error while listening to websocket stream, error: '{e.Message}'"));
                 causedException = e;
             }
 

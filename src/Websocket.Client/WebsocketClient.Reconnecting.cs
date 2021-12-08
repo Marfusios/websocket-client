@@ -75,7 +75,14 @@ namespace Websocket.Client
             }
                 
             _cancellation.Cancel();
-            _client?.Abort();
+            try
+            {
+                _client?.Abort();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, L($"Exception while aborting client. " + $"Error: '{e.Message}'"));
+            }
             _client?.Dispose();
 
             if (!IsReconnectionEnabled || disInfo.CancelReconnection)

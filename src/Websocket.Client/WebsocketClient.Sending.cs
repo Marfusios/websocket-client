@@ -13,7 +13,7 @@ namespace Websocket.Client
             SingleReader = true,
             SingleWriter = false
         });
-        private readonly Channel<byte[]> _messagesBinaryToSendQueue = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions()
+        private readonly Channel<ArraySegment<byte>> _messagesBinaryToSendQueue = Channel.CreateUnbounded<ArraySegment<byte>>(new UnboundedChannelOptions()
         {
             SingleReader = true,
             SingleWriter = false
@@ -38,6 +38,18 @@ namespace Websocket.Client
         /// </summary>
         /// <param name="message">Binary message to be sent</param>
         public void Send(byte[] message)
+        {
+            Validations.Validations.ValidateInput(message, nameof(message));
+
+            _messagesBinaryToSendQueue.Writer.TryWrite(new ArraySegment<byte>(message));
+        }
+
+        /// <summary>
+        /// Send binary message to the websocket channel. 
+        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// </summary>
+        /// <param name="message">Binary message to be sent</param>
+        public void Send(ArraySegment<byte> message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
@@ -67,7 +79,7 @@ namespace Websocket.Client
         /// <param name="message">Message to be sent</param>
         public Task SendInstant(byte[] message)
         {
-            return SendInternalSynchronized(message);
+            return SendInternalSynchronized(new ArraySegment<byte>(message));
         }
 
         /// <summary>
@@ -97,7 +109,7 @@ namespace Websocket.Client
                         }
                         catch (Exception e)
                         {
-                            _logger.LogError(L($"Failed to send text message: '{message}'. Error: {e.Message}"));
+                            _logger.LogError(e, L($"Failed to send text message: '{message}'. Error: {e.Message}"));
                         }
                     }
                 }
@@ -138,7 +150,7 @@ namespace Websocket.Client
                         }
                         catch (Exception e)
                         {
-                            _logger.LogError(L($"Failed to send binary message: '{message}'. Error: {e.Message}"));
+                            _logger.LogError(e, L($"Failed to send binary message: '{message}'. Error: {e.Message}"));
                         }
                     }
                 }
@@ -199,7 +211,7 @@ namespace Websocket.Client
                 .ConfigureAwait(false);
         }
 
-        private async Task SendInternalSynchronized(byte[] message)
+        private async Task SendInternalSynchronized(ArraySegment<byte> message)
         {
             using (await _locker.LockAsync())
             {
@@ -207,18 +219,18 @@ namespace Websocket.Client
             }
         }
 
-        private async Task SendInternal(byte[] message)
+        private async Task SendInternal(ArraySegment<byte> message)
         {
             if (!IsClientConnected())
             {
-                _logger.LogDebug(L($"Client is not connected to server, cannot send binary, length: {message.Length}"));
+                _logger.LogDebug(L($"Client is not connected to server, cannot send binary, length: {message.Count}"));
                 return;
             }
 
-            _logger.LogTrace(L($"Sending binary, length: {message.Length}"));
+            _logger.LogTrace(L($"Sending binary, length: {message.Count}"));
 
             await _client
-                .SendAsync(new ArraySegment<byte>(message), WebSocketMessageType.Binary, true, _cancellation.Token)
+                .SendAsync(message, WebSocketMessageType.Binary, true, _cancellation.Token)
                 .ConfigureAwait(false);
         }
     }

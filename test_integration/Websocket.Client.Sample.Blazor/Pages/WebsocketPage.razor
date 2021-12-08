@@ -1,0 +1,115 @@
+﻿@page "/websocket"
+@using System.Net.WebSockets
+@implements IAsyncDisposable;
+
+<h1>Websocket Example</h1>
+
+<h3>Connecting to Bitmex server</h3>
+<small>Running: @_client?.IsRunning</small>
+
+@if (_client?.IsRunning == true)
+{
+    <div class="sticky-top w-50 mb-3 mt-3">
+        <form @onsubmit="@SendMessage">
+            
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Message</span>
+                </div>
+                <input @bind="@_message" type="text" class="form-control">
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-outline-secondary">Send</button>
+                </div>
+            </div>
+        </form>
+    </div>
+}
+
+<pre>
+    @foreach (var log in GetLogs())
+    {
+        var timestamp = log.Timestamp.ToLocalTime().ToString("HH:mm:ss.fff");
+        switch (log.Severity)
+        {
+            case LogSeverity.Warning:
+            <div class="text-warning">@timestamp @log.Message</div>
+                break;
+            case LogSeverity.Error:
+            <div class="text-danger">@timestamp @log.Message</div>
+                break;
+            default:
+            <div class="text-secondary">@timestamp @log.Message</div>
+                break;
+        }
+    }
+</pre>
+
+@code {
+    private readonly List<LogMessage> _logs = new();
+    private IWebsocketClient? _client;
+    private string _message = "ping";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var url = new Uri("wss://www.bitmex.com/realtime");
+        _client = new WebsocketClient(url);
+
+        _client.Name = "Bitmex";
+        _client.ReconnectTimeout = TimeSpan.FromSeconds(120);
+        _client.ErrorReconnectTimeout = TimeSpan.FromSeconds(30);
+        _client.ReconnectionHappened.Subscribe(info =>
+        {
+            Console.WriteLine($"Reconnection happened, type: {info.Type}, url: {_client.Url}");
+            Log($"Reconnected, type: '{info.Type}'", LogSeverity.Warning);
+            StateHasChanged();
+        });
+        _client.DisconnectionHappened.Subscribe(info =>
+        {
+            Console.WriteLine($"Disconnection happened, type: {info.Type}");
+            Log($"Disconnected, type: '{info.Type}', reason: '{info.CloseStatus}'", LogSeverity.Warning);
+            StateHasChanged();
+        });
+
+        _client.MessageReceived.Subscribe(msg =>
+        {
+            Console.WriteLine($"Message received: {msg}");
+            Log($"Received: '{msg.Text}'", LogSeverity.Info);
+            StateHasChanged();
+        });
+
+        Console.WriteLine("Starting...");
+        await _client.Start();
+        Console.WriteLine("Started.");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_client == null)
+            return;
+
+        await _client.Stop(WebSocketCloseStatus.NormalClosure, string.Empty);
+        _client.Dispose();
+    }
+
+    private void SendMessage()
+    {
+        Log($"Sending: '{_message}'", LogSeverity.Info);
+        _client?.Send(_message);
+    }
+
+    private void Log(string message, LogSeverity severity)
+    {
+        _logs.Add(new LogMessage(message, severity, DateTime.UtcNow));
+    }
+
+    private LogMessage[] GetLogs() => _logs.ToArray().Reverse().ToArray();
+
+    private record LogMessage(string Message, LogSeverity Severity, DateTime Timestamp);
+
+    private enum LogSeverity
+    {
+        Info,
+        Warning,
+        Error
+    }
+}

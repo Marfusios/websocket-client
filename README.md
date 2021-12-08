@@ -11,7 +11,7 @@ This is a wrapper over native C# class `ClientWebSocket` with built-in reconnect
 ### Features
 
 * installation via NuGet ([Websocket.Client](https://www.nuget.org/packages/Websocket.Client))
-* targeting .NET Standard 2.0 (.NET Core, Linux/MacOS compatible)
+* targeting .NET Standard 2.0 (.NET Core, Linux/MacOS compatible) + Standard 2.1, .NET 5 and .NET 6
 * reactive extensions ([Rx.NET](https://github.com/Reactive-Extensions/Rx.NET))
 * integrated logging abstraction ([LibLog](https://github.com/damianh/LibLog))
 * using Channels for high performance sending queue
@@ -39,8 +39,9 @@ using (var client = new WebsocketClient(url))
 
 More usage examples:
 * integration tests ([link](test_integration/Websocket.Client.Tests.Integration))
-
 * console sample ([link](test_integration/Websocket.Client.Sample/Program.cs))
+* .net framework sample ([link](test_integration/Websocket.Client.Sample.NetFramework))
+* blazor sample ([link](test_integration/Websocket.Client.Sample.Blazor))
 
 
 **Pull Requests are welcome!**
@@ -90,12 +91,14 @@ Every subscription code is called on a main websocket thread. Every subscription
 ```csharp
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("{"))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("{"))
     .Subscribe(obj => { code1 });
 
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("["))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("["))
     .Subscribe(arr => { code2 });
 
 // 'code1' and 'code2' are called in a correct order, according to websocket flow
@@ -110,13 +113,15 @@ Every single subscription code is called on a separate thread. Every single subs
 ```csharp
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("{"))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("{"))
     .ObserveOn(TaskPoolScheduler.Default)
     .Subscribe(obj => { code1 });
 
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("["))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("["))
     .ObserveOn(TaskPoolScheduler.Default)
     .Subscribe(arr => { code2 });
 
@@ -133,14 +138,16 @@ In case you want to run your subscription code on the separate thread but still 
 private static readonly object GATE1 = new object();
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("{"))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("{"))
     .ObserveOn(TaskPoolScheduler.Default)
     .Synchronize(GATE1)
     .Subscribe(obj => { code1 });
 
 client
     .MessageReceived
-    .Where(msg => msg.StartsWith("["))
+    .Where(msg => msg.Text != null)
+    .Where(msg => msg.Text.StartsWith("["))
     .ObserveOn(TaskPoolScheduler.Default)
     .Synchronize(GATE1)
     .Subscribe(arr => { code2 });

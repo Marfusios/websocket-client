@@ -15,6 +15,8 @@ namespace Websocket.Client.Tests.Integration
     {
         private static readonly Uri WebsocketUrl = new Uri("wss://www.bitmex.com/realtime");
         private readonly ITestOutputHelper _output;
+        private static ILoggerFactory _loggerFactory;
+        private static ILogger<WebsocketClient> _logger;
 
         public WebsocketClientTests(ITestOutputHelper output)
         {
@@ -25,7 +27,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task OnStarting_ShouldGetInfoResponse()
         {
-            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl))
+            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl, logger: _logger))
             {
                 string received = null;
                 var receivedEvent = new ManualResetEvent(false);
@@ -47,7 +49,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task SendMessageBeforeStart_ShouldWorkAfterStart()
         {
-            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl))
+            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl, logger: _logger))
             {
                 string received = null;
                 var receivedCount = 0;
@@ -85,7 +87,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task SendBinaryMessage_ShouldWork()
         {
-            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl))
+            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl, logger: _logger))
             {
                 string received = null;
                 var receivedEvent = new ManualResetEvent(false);
@@ -93,7 +95,7 @@ namespace Websocket.Client.Tests.Integration
                 client.MessageReceived.Subscribe(msg =>
                 {
                     var msgText = msg.Text ?? string.Empty;
-                    if (msgText.Contains("Unrecognized request"))
+                    if (msgText.Contains("400"))
                     {
                         received = msgText;
                         receivedEvent.Set();
@@ -114,7 +116,7 @@ namespace Websocket.Client.Tests.Integration
         {
             for (int i = 0; i < 3; i++)
             {
-                using (IWebsocketClient client = new WebsocketClient(WebsocketUrl))
+                using (IWebsocketClient client = new WebsocketClient(WebsocketUrl, logger: _logger))
                 {
                     await client.Start();
                     await Task.Delay(i * 20);
@@ -125,7 +127,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task DisabledReconnecting_ShouldWorkAsExpected()
         {
-            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl))
+            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl, logger: _logger))
             {
                 var receivedCount = 0;
                 var receivedEvent = new ManualResetEvent(false);
@@ -158,7 +160,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task DisabledReconnecting_ShouldWorkAtRuntime()
         {
-            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl))
+            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl, logger: _logger))
             {
                 var receivedCount = 0;
 
@@ -182,7 +184,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task OnClose_ShouldWorkCorrectly()
         {
-            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl))
+            using (IWebsocketClient client = new WebsocketClient(WebsocketUrl, logger: _logger))
             {
                 client.ReconnectTimeout = TimeSpan.FromSeconds(5);
 
@@ -206,9 +208,7 @@ namespace Websocket.Client.Tests.Integration
 
                 await client.Start();
 
-#pragma warning disable 4014
-                Task.Run(async () =>
-#pragma warning restore 4014
+                _ = Task.Run(async () =>
                 {
                     await Task.Delay(2000);
                     var success = await client.Stop(WebSocketCloseStatus.InternalServerError, "server error 500");
@@ -227,7 +227,7 @@ namespace Websocket.Client.Tests.Integration
                 Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
                 Assert.Equal(WebSocketCloseStatus.InternalServerError, disconnectionInfo.CloseStatus);
                 Assert.Equal("server error 500", disconnectionInfo.CloseStatusDescription);
-                Assert.Equal(WebSocketState.Aborted, nativeClient.State);
+                Assert.Equal(WebSocketState.Closed, nativeClient.State);
                 Assert.Equal(WebSocketCloseStatus.InternalServerError, nativeClient.CloseStatus);
                 Assert.Equal("server error 500", nativeClient.CloseStatusDescription);
 
@@ -240,11 +240,15 @@ namespace Websocket.Client.Tests.Integration
 
         private void InitLogging(ITestOutputHelper output)
         {
+            if(output is null)
+                return;
+
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .WriteTo.TestOutput(output, LogEventLevel.Verbose)
                 .CreateLogger();
-            WebsocketClient.LoggerFactory = LoggerFactory.Create(builder => { builder.AddSerilog(Log.Logger); });
+            _loggerFactory = LoggerFactory.Create(builder => { builder.AddSerilog(Log.Logger); });
+            _logger = _loggerFactory.CreateLogger<WebsocketClient>();
         }
     }
 }

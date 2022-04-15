@@ -41,6 +41,34 @@ namespace Websocket.Client
         private readonly Subject<ReconnectionInfo> _reconnectionSubject = new Subject<ReconnectionInfo>();
         private readonly Subject<DisconnectionInfo> _disconnectedSubject = new Subject<DisconnectionInfo>();
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="clientFactory"></param>
+
+        public WebsocketClient(Func<ClientWebSocket> clientFactory = null)
+            : this(GetClientFactory(clientFactory))
+        {
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public WebsocketClient(Func<Uri, CancellationToken, Task<WebSocket>> connectionFactory = null)
+        {                        
+            _connectionFactory = connectionFactory ?? (async (uri, token) =>
+            {
+                //var client = new ClientWebSocket
+                //{
+                //    Options = { KeepAliveInterval = new TimeSpan(0, 0, 5, 0) }
+                //};
+                var client = new ClientWebSocket();
+                await client.ConnectAsync(uri, token).ConfigureAwait(false);
+                return client;
+            });
+        }
+
         /// <summary>
         /// A simple websocket client with built-in reconnection and error handling
         /// </summary>
@@ -164,6 +192,9 @@ namespace Websocket.Client
 
         /// <inheritdoc />
         public ClientWebSocket NativeClient => GetSpecificOrThrow(_client);
+
+        /// <inheritdoc />
+        public Predicate<string> IsSubprotocolMessage { get; set; } = null;
 
         /// <summary>
         /// Terminate the websocket connection and cleanup everything

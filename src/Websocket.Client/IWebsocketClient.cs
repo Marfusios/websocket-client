@@ -17,6 +17,11 @@ namespace Websocket.Client
         Uri Url { get; set; }
 
         /// <summary>
+        /// Validate if an incoming message is from sub-protocol
+        /// </summary>        
+        Predicate< string> IsSubprotocolMessage { get; set; }
+
+        /// <summary>
         /// Stream with received message (raw format)
         /// </summary>
         IObservable<ResponseMessage> MessageReceived { get; }

@@ -146,6 +146,8 @@ namespace Websocket.Client.Tests
         [Fact]
         public async Task Stopping_ShouldWorkCorrectly()
         {
+            var disconnectionCount = 0;
+
             using (var client = _context.CreateClient())
             {
                 client.ReconnectTimeout = TimeSpan.FromSeconds(7);
@@ -153,7 +155,6 @@ namespace Websocket.Client.Tests
                 string received = null;
                 var receivedCount = 0;
                 var receivedEvent = new ManualResetEvent(false);
-                var disconnectionCount = 0;
                 DisconnectionInfo disconnectionInfo = null;
 
                 client.MessageReceived
@@ -186,13 +187,17 @@ namespace Websocket.Client.Tests
                 // check that reconnection is disabled
                 await Task.Delay(8000);
                 Assert.Equal(1, receivedCount);
-                Assert.InRange(disconnectionCount, 1, 2);
+                Assert.Equal(1, disconnectionCount);
                 Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
                 Assert.Equal(WebSocketCloseStatus.InternalServerError, disconnectionInfo.CloseStatus);
                 Assert.Equal("server error 500", disconnectionInfo.CloseStatusDescription);
                 Assert.False(client.IsRunning);
                 Assert.False(client.IsStarted);
             }
+
+            // Disposing a disconnected socket should not cause DisconnectionHappened to trigger.
+            await Task.Delay(200);
+            Assert.Equal(1, disconnectionCount);
         }
 
         [Fact]

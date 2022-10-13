@@ -191,9 +191,13 @@ namespace Websocket.Client
                 Logger.Error(e, L($"Failed to dispose client, error: {e.Message}"));
             }
 
+            if (IsRunning) 
+            {
+                _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.Exit, _client, null));
+            }
+
             IsRunning = false;
             IsStarted = false;
-            _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.Exit, _client, null));
             _disconnectedSubject.OnCompleted();
         }
 

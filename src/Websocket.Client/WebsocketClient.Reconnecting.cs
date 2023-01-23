@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Websocket.Client.Logging;
+using Websocket.Client.Models;
 
 namespace Websocket.Client
 {

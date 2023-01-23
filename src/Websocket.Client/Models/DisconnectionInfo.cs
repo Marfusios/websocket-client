@@ -2,7 +2,7 @@
 using System.Net.WebSockets;
 
 // ReSharper disable once CheckNamespace
-namespace Websocket.Client
+namespace Websocket.Client.Models
 {
     /// <summary>
     /// Info about happened disconnection
@@ -10,7 +10,7 @@ namespace Websocket.Client
     public class DisconnectionInfo
     {
         /// <inheritdoc />
-        public DisconnectionInfo(DisconnectionType type, WebSocketCloseStatus? closeStatus, 
+        public DisconnectionInfo(DisconnectionType type, WebSocketCloseStatus closeStatus,
             string closeStatusDescription, string subProtocol, Exception exception)
         {
             Type = type;
@@ -28,7 +28,7 @@ namespace Websocket.Client
         /// <summary>
         /// Indicates the reason why the remote endpoint initiated the close handshake 
         /// </summary>
-        public WebSocketCloseStatus? CloseStatus { get; }
+        public WebSocketCloseStatus CloseStatus { get; }
 
         /// <summary>
         /// Allows the remote endpoint to describe the reason why the connection was closed 
@@ -62,7 +62,7 @@ namespace Websocket.Client
         /// </summary>
         public static DisconnectionInfo Create(DisconnectionType type, WebSocket client, Exception exception)
         {
-            return new DisconnectionInfo(type, client?.CloseStatus, client?.CloseStatusDescription, 
+            return new DisconnectionInfo(type, (WebSocketCloseStatus) client?.CloseStatus, client?.CloseStatusDescription,
                 client?.SubProtocol, exception);
         }
     }

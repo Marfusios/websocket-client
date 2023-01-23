@@ -1,5 +1,6 @@
 ﻿// ReSharper disable once CheckNamespace
-namespace Websocket.Client
+
+namespace Websocket.Client.Models
 {
     /// <summary>
     /// Type that specify happened reconnection
@@ -19,7 +20,7 @@ namespace Websocket.Client
         /// <summary>
         /// Type used when connection to websocket was lost by not receiving any message in given time-range
         /// </summary>
-        NoMessageReceived = 2, 
+        NoMessageReceived = 2,
 
         /// <summary>
         /// Type used after unsuccessful previous reconnection

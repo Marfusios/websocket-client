@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Websocket.Client.Exceptions;
 using Websocket.Client.Logging;
-using Websocket.Client.Models;
 using Websocket.Client.Threading;
 
 namespace Websocket.Client

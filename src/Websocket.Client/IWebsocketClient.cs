@@ -2,7 +2,6 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
-using Websocket.Client.Models;
 
 namespace Websocket.Client
 {

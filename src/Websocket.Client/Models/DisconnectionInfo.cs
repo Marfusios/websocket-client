@@ -2,7 +2,7 @@
 using System.Net.WebSockets;
 
 // ReSharper disable once CheckNamespace
-namespace Websocket.Client.Models
+namespace Websocket.Client
 {
     /// <summary>
     /// Info about happened disconnection

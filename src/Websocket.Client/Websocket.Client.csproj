@@ -1,44 +1,41 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net5;net6</TargetFrameworks>
-    <PackageId>Websocket.Client</PackageId>
-    <Version>4.4.0</Version>
-    <Authors>Mariusz Kotas</Authors>
-    <Description>Client for websocket API with built-in reconnection and error handling</Description>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Release of version 4.0</PackageReleaseNotes>
-    <Copyright>Copyright 2020 Mariusz Kotas. All rights reserved.</Copyright>
-    <PackageTags>websockets websocket client</PackageTags>
-    <PackageLicense>https://github.com/Marfusios/websocket-client/blob/master/LICENSE</PackageLicense>
-    <PackageProjectUrl>https://github.com/Marfusios/websocket-client</PackageProjectUrl>
-    <PackageIconUrl>https://raw.githubusercontent.com/Marfusios/websocket-client/master/src/Websocket.Client/icon.png</PackageIconUrl>
-    <PackageIcon>icon.png</PackageIcon>
-    <RepositoryUrl>https://github.com/Marfusios/websocket-client</RepositoryUrl>
-    <RepositoryType>Git</RepositoryType>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile> 
-    <AssemblyVersion>4.4.0.0</AssemblyVersion>
-    <FileVersion>4.4.0.0</FileVersion>
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0;netstandard2.1;net5;net6</TargetFrameworks>
+		<PackageId>Websocket.Client</PackageId>
+		<Authors>Mariusz Kotas</Authors>
+		<Description>Client for websocket API with built-in reconnection and error handling</Description>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<PackageReleaseNotes>Enhancements</PackageReleaseNotes>
+		<Copyright>Copyright 2023 Mariusz Kotas. All rights reserved.</Copyright>
+		<PackageTags>websockets websocket client</PackageTags>
+		<PackageLicense>https://github.com/Marfusios/websocket-client/blob/master/LICENSE</PackageLicense>
+		<PackageProjectUrl>https://github.com/Marfusios/websocket-client</PackageProjectUrl>
+		<PackageIconUrl>https://raw.githubusercontent.com/Marfusios/websocket-client/master/src/Websocket.Client/icon.png</PackageIconUrl>
+		<PackageIcon>icon.png</PackageIcon>
+		<RepositoryUrl>https://github.com/Marfusios/websocket-client</RepositoryUrl>
+		<RepositoryType>Git</RepositoryType>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>websocket-client-key.snk</AssemblyOriginatorKeyFile>
+		<SignAssembly>true</SignAssembly>
+		<AssemblyOriginatorKeyFile>websocket-client-key.snk</AssemblyOriginatorKeyFile>
 
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-  </PropertyGroup>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="LibLog" Version="5.0.8">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="System.Reactive" Version="4.3.2" />
-    <PackageReference Include="System.Threading.Channels" Version="4.7.0" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="LibLog" Version="5.0.8">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="System.Reactive" Version="4.3.2" />
+		<PackageReference Include="System.Threading.Channels" Version="4.7.0" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Include="icon.png" Pack="true" PackagePath="" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="icon.png" Pack="true" PackagePath="" />
+	</ItemGroup>
 
 </Project>

@@ -236,7 +236,7 @@ namespace Websocket.Client.Tests
                 await client.Reconnect();
                 await client.ReconnectOrFail();
 
-                await Task.Delay(4000);
+                await Task.Delay(8000);
 
                 _output.WriteLine($"Received message {receivedCount} times and reconnected {receivedCount} times, " +
                                   $"last: {lastReconnectionType}");

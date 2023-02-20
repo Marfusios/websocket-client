@@ -1,4 +1,4 @@
-![Logo](websocket-logo.png)
+![Logo](https://raw.githubusercontent.com/Marfusios/websocket-client/master/websocket-logo.png)
 # Websocket .NET client [![NuGet version](https://badge.fury.io/nu/Websocket.Client.svg)](https://www.nuget.org/packages/Websocket.Client) [![Nuget downloads](https://img.shields.io/nuget/dt/Websocket.Client)](https://www.nuget.org/packages/Websocket.Client)
 
 This is a wrapper over native C# class `ClientWebSocket` with built-in reconnection and error handling. 

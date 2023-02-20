@@ -9,11 +9,12 @@
 		<PackageReleaseNotes>Enhancements</PackageReleaseNotes>
 		<Copyright>Copyright 2023 Mariusz Kotas. All rights reserved.</Copyright>
 		<PackageTags>websockets websocket client</PackageTags>
-		<PackageLicense>https://github.com/Marfusios/websocket-client/blob/master/LICENSE</PackageLicense>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/Marfusios/websocket-client</PackageProjectUrl>
 		<PackageIconUrl>https://raw.githubusercontent.com/Marfusios/websocket-client/master/src/Websocket.Client/icon.png</PackageIconUrl>
 		<PackageIcon>icon.png</PackageIcon>
 		<RepositoryUrl>https://github.com/Marfusios/websocket-client</RepositoryUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryType>Git</RepositoryType>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -36,6 +37,7 @@
 
 	<ItemGroup>
 		<None Include="icon.png" Pack="true" PackagePath="" />
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 </Project>

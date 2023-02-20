@@ -27,7 +27,7 @@ namespace Websocket.Client
 
         private Uri _url;
         private Timer _lastChanceTimer;
-        private DateTime _lastReceivedMsg = DateTime.UtcNow; 
+        private DateTime _lastReceivedMsg = DateTime.UtcNow;
 
         private bool _disposing;
         private bool _reconnecting;
@@ -70,7 +70,7 @@ namespace Websocket.Client
                 var client = new ClientWebSocket();
                 await client.ConnectAsync(uri, token).ConfigureAwait(false);
                 return client;
-            }); 
+            });
         }
 
         /// <inheritdoc />
@@ -141,7 +141,7 @@ namespace Websocket.Client
         /// Get or set the name of the current websocket client instance.
         /// For logging purpose (in case you use more parallel websocket clients and want to distinguish between them)
         /// </summary>
-        public string Name { get; set;}
+        public string Name { get; set; }
 
         /// <summary>
         /// Returns true if Start() method was called at least once. False if not started or disposed
@@ -191,7 +191,7 @@ namespace Websocket.Client
                 Logger.Error(e, L($"Failed to dispose client, error: {e.Message}"));
             }
 
-            if (IsRunning) 
+            if (IsRunning)
             {
                 _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.Exit, _client, null));
             }
@@ -229,11 +229,11 @@ namespace Websocket.Client
         public async Task<bool> Stop(WebSocketCloseStatus status, string statusDescription)
         {
             var result = await StopInternal(
-                _client, 
-                status, 
+                _client,
+                status,
                 statusDescription,
                 null,
-                false, 
+                false,
                 false).ConfigureAwait(false);
             _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
             return result;
@@ -251,7 +251,7 @@ namespace Websocket.Client
                 status,
                 statusDescription,
                 null,
-                true, 
+                true,
                 false).ConfigureAwait(false);
             _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
             return result;
@@ -262,7 +262,8 @@ namespace Websocket.Client
             if (clientFactory == null)
                 return null;
 
-            return (async (uri, token) => {
+            return (async (uri, token) =>
+            {
                 var client = clientFactory();
                 await client.ConnectAsync(uri, token).ConfigureAwait(false);
                 return client;
@@ -271,7 +272,7 @@ namespace Websocket.Client
 
         private async Task StartInternal(bool failFast)
         {
-            if(_disposing)
+            if (_disposing)
             {
                 throw new WebsocketException(L("Client is already disposed, starting not possible"));
             }
@@ -294,7 +295,7 @@ namespace Websocket.Client
             StartBackgroundThreadForSendingBinary();
         }
 
-        private async Task<bool> StopInternal(WebSocket client, WebSocketCloseStatus status, string statusDescription, 
+        private async Task<bool> StopInternal(WebSocket client, WebSocketCloseStatus status, string statusDescription,
             CancellationToken? cancellation, bool failFast, bool byServer)
         {
             if (_disposing)
@@ -302,14 +303,8 @@ namespace Websocket.Client
                 throw new WebsocketException(L("Client is already disposed, stopping not possible"));
             }
 
-            if(!IsRunning)
-            {
-                Logger.Info(L("Client is already stopped"));
+            DeactivateLastChance();
 
-                return false;
-            }
-
-            var result = false;
             if (client == null)
             {
                 IsStarted = false;
@@ -317,13 +312,18 @@ namespace Websocket.Client
                 return false;
             }
 
-            DeactivateLastChance();
+            if (!IsRunning)
+            {
+                Logger.Info(L("Client is already stopped"));
+                return false;
+            }
 
+            var result = false;
             try
             {
                 var cancellationToken = cancellation ?? CancellationToken.None;
                 _stopping = true;
-                if(byServer)
+                if (byServer)
                     await client.CloseOutputAsync(status, statusDescription, cancellationToken);
                 else
                     await client.CloseAsync(status, statusDescription, cancellationToken);
@@ -341,9 +341,14 @@ namespace Websocket.Client
             }
             finally
             {
-                IsStarted = false;
                 IsRunning = false;
                 _stopping = false;
+
+                if (!byServer || !IsReconnectionEnabled)
+                {
+                    // stopped manually or no reconnection, mark client as non-started
+                    IsStarted = false;
+                }
             }
 
             return result;
@@ -352,7 +357,7 @@ namespace Websocket.Client
         private async Task StartClient(Uri uri, CancellationToken token, ReconnectionType type, bool failFast)
         {
             DeactivateLastChance();
-            
+
             try
             {
                 _client = await _connectionFactory(uri, token).ConfigureAwait(false);
@@ -395,7 +400,7 @@ namespace Websocket.Client
                                   $"Waiting {timeout.TotalSeconds} sec before next reconnection try. Error: '{e.Message}'"));
                 await Task.Delay(timeout, token).ConfigureAwait(false);
                 await Reconnect(ReconnectionType.Error, false, e).ConfigureAwait(false);
-            }       
+            }
         }
 
         private bool IsClientConnected()
@@ -404,7 +409,7 @@ namespace Websocket.Client
         }
 
         private async Task Listen(WebSocket client, CancellationToken token)
-        { 
+        {
             Exception causedException = null;
             try
             {
@@ -434,7 +439,7 @@ namespace Websocket.Client
                             resultArrayWithTrailing = currentChunk;
                             isResultArrayCloned = false;
                         }
-                        else if(currentChunk == null)
+                        else if (currentChunk == null)
                         {
                             // weird chunk, do nothing
                         }
@@ -457,7 +462,7 @@ namespace Websocket.Client
                             break;
                         }
 
-                        if(isResultArrayCloned)
+                        if (isResultArrayCloned)
                             continue;
 
                         // we got more chunks incoming, need to clone first chunk
@@ -482,7 +487,7 @@ namespace Websocket.Client
                     {
                         Logger.Trace(L($"Received close message"));
 
-                        if(!IsStarted || _stopping)
+                        if (!IsStarted || _stopping)
                         {
                             return;
                         }
@@ -588,7 +593,7 @@ namespace Websocket.Client
             if (client == null)
                 return null;
             var specific = client as ClientWebSocket;
-            if(specific == null)
+            if (specific == null)
                 throw new WebsocketException("Cannot cast 'WebSocket' client to 'ClientWebSocket', " +
                                              "provide correct type via factory or don't use this property at all.");
             return specific;
@@ -617,7 +622,7 @@ namespace Websocket.Client
         private DisconnectionType TranslateTypeToDisconnection(ReconnectionType type)
         {
             // beware enum indexes must correspond to each other
-            return (DisconnectionType) type;
+            return (DisconnectionType)type;
         }
     }
 }

@@ -57,8 +57,11 @@ namespace Websocket.Client
         private async Task Reconnect(ReconnectionType type, bool failFast, Exception causedException)
         {
             IsRunning = false;
-            if (_disposing)
+            if (_disposing || !IsStarted)
+            {
+                // client already disposed or stopped manually
                 return;
+            }
 
             _reconnecting = true;
 
@@ -73,7 +76,7 @@ namespace Websocket.Client
                     Logger.Info(L($"Reconnecting canceled by user, exiting."));
                 }
             }
-                
+
             _cancellation.Cancel();
             try
             {

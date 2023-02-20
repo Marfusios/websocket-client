@@ -519,5 +519,49 @@ namespace Websocket.Client.Tests
             Assert.NotNull(received);
             Assert.Equal(3 + 1, receivedCount);
         }
+
+        [Fact]
+        public async Task Stopping_InvalidServer_ShouldStopReconnection()
+        {
+            using var client = _context.CreateInvalidClient(new Uri("wss://google.com"));
+            client.ErrorReconnectTimeout = TimeSpan.FromSeconds(5);
+
+            string received = null;
+            var receivedCount = 0;
+            var disconnectionCount = 0;
+            DisconnectionInfo disconnectionInfo = null;
+
+            client
+                .MessageReceived
+                .Subscribe(msg =>
+                {
+                    _output.WriteLine($"Received: '{msg}'");
+                    receivedCount++;
+                    received = msg.Text;
+                });
+
+            client.DisconnectionHappened.Subscribe(x =>
+            {
+                disconnectionCount++;
+                disconnectionInfo = x;
+            });
+
+            _ = client.Start();
+            await Task.Delay(TimeSpan.FromSeconds(1));
+
+            Assert.True(client.IsStarted, "IsStarted should be true");
+            await client.Stop(WebSocketCloseStatus.NormalClosure, string.Empty);
+
+            await Task.Delay(TimeSpan.FromSeconds(6));
+
+            Assert.False(client.IsRunning, "IsRunning is true and shouldn't");
+            Assert.False(client.IsStarted, "IsStarted is true and shouldn't");
+
+            Assert.Equal(2, disconnectionCount);
+            Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
+
+            Assert.Equal(0, receivedCount);
+            Assert.Null(received);
+        }
     }
 }

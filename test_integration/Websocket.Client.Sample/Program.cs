@@ -11,11 +11,11 @@ using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Websocket.Client.Sample
 {
-    class Program
+    internal class Program
     {
-        private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(false);
+        private static readonly ManualResetEvent ExitEvent = new(false);
 
-        static void Main(string[] args)
+        private static void Main()
         {
             InitLogging();
 

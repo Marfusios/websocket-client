@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net.WebSockets;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Websocket.Client.Tests.TestServer;
@@ -24,73 +21,69 @@ namespace Websocket.Client.Tests
         [Fact]
         public async Task PingPong()
         {
-            using (var client = _context.CreateClient())
-            {
-                string received = null;
-                var receivedCount = 0;
-                var receivedEvent = new ManualResetEvent(false);
-                
-                client
-                    .MessageReceived
-                    .Subscribe(msg =>
-                    {
-                        _output.WriteLine($"Received: '{msg}'");
-                        receivedCount++;
-                        received = msg.Text;
+            using var client = _context.CreateClient();
+            string received = null;
+            var receivedCount = 0;
+            var receivedEvent = new ManualResetEvent(false);
 
-                        if(receivedCount >= 6)
-                            receivedEvent.Set();
-                    });
+            client
+                .MessageReceived
+                .Subscribe(msg =>
+                {
+                    _output.WriteLine($"Received: '{msg}'");
+                    receivedCount++;
+                    received = msg.Text;
 
-                await client.Start();
+                    if (receivedCount >= 6)
+                        receivedEvent.Set();
+                });
 
-                client.Send("ping");
-                client.Send("ping");
-                client.Send("ping");
-                client.Send("ping");
-                client.Send("ping");
+            await client.Start();
 
-                receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            client.Send("ping");
+            client.Send("ping");
+            client.Send("ping");
+            client.Send("ping");
+            client.Send("ping");
 
-                Assert.NotNull(received);
-                Assert.Equal(5+1, receivedCount);
-            }
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+
+            Assert.NotNull(received);
+            Assert.Equal(5 + 1, receivedCount);
         }
 
         [Fact]
         public async Task Echo_ShouldReceiveInCorrectOrder()
         {
-            using (var client = _context.CreateClient())
-            {
-                string received = null;
-                var receivedCount = 0;
-                var receivedEvent = new ManualResetEvent(false);
+            using var client = _context.CreateClient();
+            string received = null;
+            var receivedCount = 0;
+            var receivedEvent = new ManualResetEvent(false);
 
-                client
-                    .MessageReceived
-                    .Subscribe(msg =>
-                    {
-                        _output.WriteLine($"Received: '{msg}'");
-                        receivedCount++;
-                        received = msg.Text;
-
-                        if (receivedCount >= 7)
-                            receivedEvent.Set();
-                    });
-
-                await client.Start();
-
-                for (int i = 0; i < 6; i++)
+            client
+                .MessageReceived
+                .Subscribe(msg =>
                 {
-                    client.Send($"echo:{i}");
-                }
+                    _output.WriteLine($"Received: '{msg}'");
+                    receivedCount++;
+                    received = msg.Text;
 
-                receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+                    if (receivedCount >= 7)
+                        receivedEvent.Set();
+                });
 
-                Assert.NotNull(received);
-                Assert.Equal(7, receivedCount);
-                Assert.Equal("echo:5", received);
+            await client.Start();
+
+            for (int i = 0; i < 6; i++)
+            {
+                client.Send($"echo:{i}");
             }
+
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+
+            Assert.NotNull(received);
+            Assert.Equal(7, receivedCount);
+            Assert.Equal("echo:5", received);
         }
     }
 

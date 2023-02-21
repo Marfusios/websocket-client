@@ -23,150 +23,142 @@ namespace Websocket.Client.Tests
         [Fact]
         public async Task StreamFakeMessage_CustomMessage_ShouldBeFakelyStreamed()
         {
-            using (var client = _context.CreateClient())
-            {
-                var myMessage = "my fake message";
-                string received = null;
-                var receivedCount = 0;
-                var receivedEvent = new ManualResetEvent(false);
+            using var client = _context.CreateClient();
+            var myMessage = "my fake message";
+            string received = null;
+            var receivedCount = 0;
+            var receivedEvent = new ManualResetEvent(false);
 
-                client
-                    .MessageReceived
-                    .Subscribe(msg =>
-                    {
-                        _output.WriteLine($"Received: '{msg}'");
-                        receivedCount++;
-                        received = msg.Text;
+            client
+                .MessageReceived
+                .Subscribe(msg =>
+                {
+                    _output.WriteLine($"Received: '{msg}'");
+                    receivedCount++;
+                    received = msg.Text;
 
-                        if (receivedCount >= 3)
-                            receivedEvent.Set();
-                    });
+                    if (receivedCount >= 3)
+                        receivedEvent.Set();
+                });
 
-                await client.Start();
+            await client.Start();
 
-                client.StreamFakeMessage(ResponseMessage.TextMessage(null));
-                client.StreamFakeMessage(ResponseMessage.TextMessage(myMessage));
+            client.StreamFakeMessage(ResponseMessage.TextMessage(null));
+            client.StreamFakeMessage(ResponseMessage.TextMessage(myMessage));
 
-                receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
-                Assert.Equal(myMessage, received);
-                Assert.Throws<WebsocketBadInputException>(() => client.StreamFakeMessage(null));
-            }
+            Assert.Equal(myMessage, received);
+            Assert.Throws<WebsocketBadInputException>(() => client.StreamFakeMessage(null));
         }
 
         [Fact]
         public async Task Echo_OneChunkMessage_ShouldReceiveCorrectly()
         {
-            using (var client = _context.CreateClient())
-            {
-                string received = null;
-                var receivedCount = 0;
-                var receivedEvent = new ManualResetEvent(false);
+            using var client = _context.CreateClient();
+            string received = null;
+            var receivedCount = 0;
+            var receivedEvent = new ManualResetEvent(false);
 
-                client
-                    .MessageReceived
-                    .Subscribe(msg =>
-                    {
-                        receivedCount++;
-                        received = msg.Text;
-
-                        if (receivedCount >= 3)
-                            receivedEvent.Set();
-                    });
-
-                await client.Start();
-
-                for (int i = 1; i < 3; i++)
+            client
+                .MessageReceived
+                .Subscribe(msg =>
                 {
-                    var sign = i == 1 ? 'A' : 'B';
-                    var msg = new string(sign, 1024 * 4 - 14);
-                    client.Send($"echo: special {msg}");
-                }
+                    receivedCount++;
+                    received = msg.Text;
 
-                receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+                    if (receivedCount >= 3)
+                        receivedEvent.Set();
+                });
 
-                Assert.NotNull(received);
-                Assert.Equal(3, receivedCount);
-                Assert.Equal(1024 * 4, received.Length);
-                Assert.StartsWith("echo: special BBBB", received);
+            await client.Start();
+
+            for (int i = 1; i < 3; i++)
+            {
+                var sign = i == 1 ? 'A' : 'B';
+                var msg = new string(sign, 1024 * 4 - 14);
+                client.Send($"echo: special {msg}");
             }
+
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+
+            Assert.NotNull(received);
+            Assert.Equal(3, receivedCount);
+            Assert.Equal(1024 * 4, received.Length);
+            Assert.StartsWith("echo: special BBBB", received);
         }
 
         [Fact]
         public async Task Echo_LargeMessage_ShouldReceiveCorrectly()
         {
-            using (var client = _context.CreateClient())
-            {
-                string received = null;
-                var receivedCount = 0;
-                var receivedEvent = new ManualResetEvent(false);
+            using var client = _context.CreateClient();
+            string received = null;
+            var receivedCount = 0;
+            var receivedEvent = new ManualResetEvent(false);
 
-                client
-                    .MessageReceived
-                    .Subscribe(msg =>
-                    {
-                        receivedCount++;
-                        received = msg.Text;
-
-                        if (receivedCount >= 3)
-                            receivedEvent.Set();
-                    });
-
-                await client.Start();
-
-                for (int i = 1; i < 3; i++)
+            client
+                .MessageReceived
+                .Subscribe(msg =>
                 {
-                    var sign = i == 1 ? 'A' : 'B';
-                    var msg = new string(sign, 1024 * 9);
-                    client.Send($"echo:{msg}");
-                }
+                    receivedCount++;
+                    received = msg.Text;
 
-                receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+                    if (receivedCount >= 3)
+                        receivedEvent.Set();
+                });
 
-                Assert.NotNull(received);
-                Assert.Equal(3, receivedCount);
-                Assert.Equal(1024 * 9 + 5, received.Length);
-                Assert.StartsWith("echo:BBBB", received);
+            await client.Start();
+
+            for (int i = 1; i < 3; i++)
+            {
+                var sign = i == 1 ? 'A' : 'B';
+                var msg = new string(sign, 1024 * 9);
+                client.Send($"echo:{msg}");
             }
+
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+
+            Assert.NotNull(received);
+            Assert.Equal(3, receivedCount);
+            Assert.Equal(1024 * 9 + 5, received.Length);
+            Assert.StartsWith("echo:BBBB", received);
         }
 
         [Fact]
         public async Task IsTextMessageConversionEnabled_False_ShouldReceiveStringMessageAsBinary()
         {
-            using (var client = _context.CreateClient())
-            {
-                client.IsTextMessageConversionEnabled = false;
+            using var client = _context.CreateClient();
+            client.IsTextMessageConversionEnabled = false;
 
-                ResponseMessage received = null;
-                var receivedCount = 0;
-                var receivedEvent = new ManualResetEvent(false);
+            ResponseMessage received = null;
+            var receivedCount = 0;
+            var receivedEvent = new ManualResetEvent(false);
 
-                client
-                    .MessageReceived
-                    .Subscribe(msg =>
-                    {
-                        receivedCount++;
-                        received = msg;
+            client
+                .MessageReceived
+                .Subscribe(msg =>
+                {
+                    receivedCount++;
+                    received = msg;
 
-                        if (receivedCount > 1)
-                            receivedEvent.Set();
-                    });
+                    if (receivedCount > 1)
+                        receivedEvent.Set();
+                });
 
-                await client.Start();
+            await client.Start();
 
-                var sign = 'C';
-                var msg = new string(sign, 1024 * 9);
-                client.Send($"echo:{msg}");
+            var sign = 'C';
+            var msg = new string(sign, 1024 * 9);
+            client.Send($"echo:{msg}");
 
-                receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
-                Assert.NotNull(received);
-                Assert.Equal(WebSocketMessageType.Binary, received.MessageType);
-                Assert.NotNull(received.Binary);
-                Assert.Null(received.Text);
-                Assert.Equal(2, receivedCount);
-                Assert.Equal(1024 * 9 + 5, received.Binary.Length);
-            }
+            Assert.NotNull(received);
+            Assert.Equal(WebSocketMessageType.Binary, received.MessageType);
+            Assert.NotNull(received.Binary);
+            Assert.Null(received.Text);
+            Assert.Equal(2, receivedCount);
+            Assert.Equal(1024 * 9 + 5, received.Binary.Length);
         }
     }
 }

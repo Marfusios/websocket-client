@@ -46,7 +46,7 @@ namespace Websocket.Client.Tests.TestServer
 
         protected virtual async Task HandleRequest(WebSocket webSocket, HttpContext context)
         {
-            while(true)
+            while (true)
             {
                 var request = await ReadRequest(webSocket);
                 var result = request.result;
@@ -92,45 +92,43 @@ namespace Websocket.Client.Tests.TestServer
         {
             var buffer = new ArraySegment<byte>(new byte[8192]);
 
-            using (var ms = new MemoryStream())
+            using var ms = new MemoryStream();
+            WebSocketReceiveResult result;
+            do
             {
-                WebSocketReceiveResult result;
-                do
-                {
-                    result = await webSocket.ReceiveAsync(buffer, CancellationToken.None);
-                    if(result.CloseStatus.HasValue)
-                        return (result, null);
+                result = await webSocket.ReceiveAsync(buffer, CancellationToken.None);
+                if (result.CloseStatus.HasValue)
+                    return (result, null);
 
-                    if (buffer.Array != null)
-                        ms.Write(buffer.Array, buffer.Offset, result.Count);
-                } while (!result.EndOfMessage);
+                if (buffer.Array != null)
+                    ms.Write(buffer.Array, buffer.Offset, result.Count);
+            } while (!result.EndOfMessage);
 
-                ms.Seek(0, SeekOrigin.Begin);
+            ms.Seek(0, SeekOrigin.Begin);
 
-                ResponseMessage message;
-                if (result.MessageType == WebSocketMessageType.Text)
-                {
-                    var data = GetEncoding().GetString(ms.ToArray());
-                    message = ResponseMessage.TextMessage(data);
-                }
-                else
-                {
-                    var data = ms.ToArray();
-                    message = ResponseMessage.BinaryMessage(data);
-                }
-
-                return (result, message);
+            ResponseMessage message;
+            if (result.MessageType == WebSocketMessageType.Text)
+            {
+                var data = GetEncoding().GetString(ms.ToArray());
+                message = ResponseMessage.TextMessage(data);
             }
+            else
+            {
+                var data = ms.ToArray();
+                message = ResponseMessage.BinaryMessage(data);
+            }
+
+            return (result, message);
         }
 
         protected virtual async Task SendResponse(WebSocket webSocket, ResponseMessage message)
         {
-            if(message.MessageType == WebSocketMessageType.Binary)
+            if (message.MessageType == WebSocketMessageType.Binary)
             {
                 await webSocket.SendAsync(
-                    new ArraySegment<byte>(message.Binary, 0, message.Binary.Length), 
-                    message.MessageType, 
-                    true, 
+                    new ArraySegment<byte>(message.Binary, 0, message.Binary.Length),
+                    message.MessageType,
+                    true,
                     CancellationToken.None);
                 return;
             }
@@ -155,7 +153,7 @@ namespace Websocket.Client.Tests.TestServer
 
         private async Task SendEcho(WebSocket webSocket, string msg, bool slowdown)
         {
-            if(slowdown)
+            if (slowdown)
                 await Task.Delay(100);
             await SendResponse(webSocket, ResponseMessage.TextMessage(msg));
         }

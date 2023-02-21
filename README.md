@@ -48,8 +48,8 @@ More usage examples:
 
 ### Advanced configuration
 
-In order to set some advanced configuration, which are available on native `ClientWebSocket` class, 
-you have to provide factory method as second parameter to WebsocketClient. 
+To set some advanced configurations, which are available on the native `ClientWebSocket` class, 
+you have to provide the factory method as a second parameter to WebsocketClient. 
 That factory method will be called on every reconnection to get a new instance of the `ClientWebSocket`. 
 
 ```csharp
@@ -67,17 +67,30 @@ var client = new WebsocketClient(url, factory);
 client.Start();
 ```
 
-Also you can access current native class via `client.NativeClient`. 
+Also, you can access the current native class via `client.NativeClient`. 
 But use it with caution, on every reconnection there will be a new instance.
+
+#### Change URL on the fly
+
+It is possible to change the remote server URL dynamically. Example: 
+
+```chsarp
+client.Url = new Uri("wss://my_new_url");;
+await client.Reconnect();
+```
 
 
 ### Reconnecting
 
-There is a built-in reconnection which invokes after 1 minute (default) of not receiving any messages from the server. It is possible to configure that timeout via `client.ReconnectTimeout`. Also, there is a stream `ReconnectionHappened` which sends information about a type of reconnection. However, if you are subscribed to low rate channels, it is very likely that you will encounter that timeout - higher the timeout to a few minutes or call `PingRequest` by your own every few seconds. 
+A built-in reconnection invokes after 1 minute (default) of not receiving any messages from the server. 
+It is possible to configure that timeout via `communicator.ReconnectTimeout`. 
+Also, a stream `ReconnectionHappened` sends information about a type of reconnection. 
+However, if you are subscribed to low-rate channels, you will likely encounter that timeout - higher it to a few minutes or implement `ping-pong` interaction on your own every few seconds. 
 
-In the case of remote server outage, there is a built-in functionality which slows down reconnection requests (could be configured via `client.ErrorReconnectTimeout`, the default is 1 minute).
+In the case of a remote server outage, there is a built-in functionality that slows down reconnection requests 
+(could be configured via `client.ErrorReconnectTimeout`, the default is 1 minute).
 
-Beware that you **need to resubscribe to channels** after reconnection happens. You should subscribe to `ReconnectionHappened` stream and send subscriptions requests. 
+Beware that you **need to resubscribe to channels** after reconnection happens. You should subscribe to `ReconnectionHappened` stream and send subscription requests. 
 
 
 ### Multi-threading

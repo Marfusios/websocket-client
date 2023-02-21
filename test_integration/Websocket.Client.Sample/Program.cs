@@ -88,7 +88,7 @@ namespace Websocket.Client.Sample
             {
                 await Task.Delay(1000);
 
-                if(!client.IsRunning)
+                if (!client.IsRunning)
                     continue;
 
                 client.Send("ping");
@@ -100,7 +100,7 @@ namespace Websocket.Client.Sample
             while (true)
             {
                 await Task.Delay(20000);
-                
+
                 var production = new Uri("wss://www.bitmex.com/realtime");
                 var testnet = new Uri("wss://testnet.bitmex.com/realtime");
 
@@ -113,11 +113,11 @@ namespace Websocket.Client.Sample
         private static void InitLogging()
         {
             var executingDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
-            var logPath = Path.Combine(executingDir, "logs", "verbose.log");
+            var logPath = Path.Combine(executingDir ?? string.Empty, "logs", "verbose.log");
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-                .WriteTo.Console(LogEventLevel.Verbose, 
+                .WriteTo.Console(LogEventLevel.Verbose,
                     theme: AnsiConsoleTheme.Literate,
                     outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message} {NewLine}{Exception}")
                 .CreateLogger();

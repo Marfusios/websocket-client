@@ -315,6 +315,7 @@ namespace Websocket.Client
             if (!IsRunning)
             {
                 Logger.Info(L("Client is already stopped"));
+                IsStarted = false;
                 return false;
             }
 

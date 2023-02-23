@@ -18,6 +18,8 @@ namespace Websocket.Client.Tests.TestServer
 
         public WebSocketClient NativeTestClient { get; set; }
 
+        public Uri InvalidUri { get; } = new("wss://invalid-url.local");
+
         public IWebsocketClient CreateClient()
         {
             var httpClient = _factory.CreateClient(); // This is needed since _factory.Server would otherwise be null
@@ -35,6 +37,11 @@ namespace Websocket.Client.Tests.TestServer
                 async (uri, token) =>
                 {
                     if (_factory.Server == null)
+                    {
+                        throw new InvalidOperationException("Connection to websocket server failed, check url");
+                    }
+
+                    if (uri == InvalidUri)
                     {
                         throw new InvalidOperationException("Connection to websocket server failed, check url");
                     }

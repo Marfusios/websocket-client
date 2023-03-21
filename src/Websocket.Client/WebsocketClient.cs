@@ -114,6 +114,13 @@ namespace Websocket.Client
         public TimeSpan? ErrorReconnectTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
+        /// Time range in ms, how long to wait before reconnecting if connection is lost with a transient error.
+        /// Set null to disable this feature. 
+        /// Default: 0 ms (immediately)
+        /// </summary>
+        public TimeSpan? LostReconnectTimeout { get; set; }
+
+        /// <summary>
         /// Enable or disable reconnection functionality (enabled by default)
         /// </summary>
         public bool IsReconnectionEnabled
@@ -560,11 +567,18 @@ namespace Websocket.Client
                 causedException = e;
             }
 
-
             if (ShouldIgnoreReconnection(client) || !IsStarted)
             {
                 // reconnection already in progress or client stopped/disposed, do nothing
                 return;
+            }
+            
+            if (LostReconnectTimeout.HasValue)
+            {
+                var timeout = LostReconnectTimeout.Value;
+                Logger.Warn(L("Listening websocket stream is lost. " +
+                              $"Waiting {timeout.TotalSeconds} sec before next reconnection try."));
+                await Task.Delay(timeout, token).ConfigureAwait(false);
             }
 
             // listening thread is lost, we have to reconnect

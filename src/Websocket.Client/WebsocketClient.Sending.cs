@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Websocket.Client
 {
@@ -55,6 +55,45 @@ namespace Websocket.Client
             Validations.Validations.ValidateInput(message, nameof(message));
 
             _messagesBinaryToSendQueue.Writer.TryWrite(message);
+        }
+
+        /// <summary>
+        /// Send text message to the websocket channel. 
+        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// </summary>
+        /// <param name="message">Text message to be sent</param>
+        /// <param name="cancellationToken">The cancellationToken enables graceful cancellation of asynchronous operations</param>
+        public ValueTask SendAsync(string message, CancellationToken cancellationToken = default)
+        {
+            Validations.Validations.ValidateInput(message, nameof(message));
+
+            return _messagesTextToSendQueue.Writer.WriteAsync(message, cancellationToken);
+        }
+
+        /// <summary>
+        /// Send binary message to the websocket channel. 
+        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// </summary>
+        /// <param name="message">Binary message to be sent</param>
+        /// <param name="cancellationToken">The cancellationToken enables graceful cancellation of asynchronous operations</param>
+        public ValueTask SendAsync(byte[] message, CancellationToken cancellationToken = default)
+        {
+            Validations.Validations.ValidateInput(message, nameof(message));
+
+            return _messagesBinaryToSendQueue.Writer.WriteAsync(new ArraySegment<byte>(message), cancellationToken);
+        }
+
+        /// <summary>
+        /// Send binary message to the websocket channel. 
+        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// </summary>
+        /// <param name="message">Binary message to be sent</param>
+        /// <param name="cancellationToken">The cancellationToken enables graceful cancellation of asynchronous operations</param>
+        public ValueTask SendAsync(ArraySegment<byte> message, CancellationToken cancellationToken = default)
+        {
+            Validations.Validations.ValidateInput(message, nameof(message));
+
+            return _messagesBinaryToSendQueue.Writer.WriteAsync(message, cancellationToken);
         }
 
         /// <summary>
@@ -205,8 +244,13 @@ namespace Websocket.Client
             }
 
             _logger.LogTrace(L("Sending: {message}"), Name, message);
+#if NETSTANDARD2_0
             var buffer = GetEncoding().GetBytes(message);
             var messageSegment = new ArraySegment<byte>(buffer);
+#else
+            ReadOnlyMemory<byte> messageSegment = MemoryMarshal.AsMemory<byte>(GetEncoding().GetBytes(message));
+#endif
+
             await _client!
                 .SendAsync(messageSegment, WebSocketMessageType.Text, true, _cancellation?.Token ?? CancellationToken.None)
                 .ConfigureAwait(false);

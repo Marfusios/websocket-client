@@ -1,14 +1,14 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.IO;
 using System;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging.Abstractions;
 using Websocket.Client.Exceptions;
 using Websocket.Client.Threading;
 
@@ -22,6 +22,7 @@ namespace Websocket.Client
         private readonly ILogger<WebsocketClient> _logger;
         private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();
         private readonly Func<Uri, CancellationToken, Task<WebSocket>> _connectionFactory;
+        private static readonly RecyclableMemoryStreamManager _memoryStreamManager = new RecyclableMemoryStreamManager();
 
         private Uri _url;
         private Timer? _lastChanceTimer;
@@ -178,6 +179,15 @@ namespace Websocket.Client
         /// Default: true
         /// </summary>
         public bool IsTextMessageConversionEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Enable or disable automatic <see cref="MemoryStream.Dispose(bool)"/> of the <see cref="MemoryStream"/> 
+        /// after sending data (only available for binary response).
+        /// Setting value to false allows you to access the stream directly.
+        /// <warning>However, keep in mind that you need to handle the dispose yourself.</warning>
+        /// Default: true
+        /// </summary>
+        public bool IsStreamDisposedAutomatically { get; set; } = true;
 
         /// <inheritdoc />
         public Encoding? MessageEncoding { get; set; }
@@ -443,71 +453,43 @@ namespace Websocket.Client
             {
                 // define buffer here and reuse, to avoid more allocation
                 const int chunkSize = 1024 * 4;
+#if NETSTANDARD2_0
                 var buffer = new ArraySegment<byte>(new byte[chunkSize]);
+#else
+                var buffer = new Memory<byte>(new byte[chunkSize]);
+#endif
 
                 do
                 {
+#if NETSTANDARD2_0
                     WebSocketReceiveResult result;
-                    byte[]? resultArrayWithTrailing = null;
-                    var resultArraySize = 0;
-                    var isResultArrayCloned = false;
-                    MemoryStream? ms = null;
+#else
+                    ValueWebSocketReceiveResult result;
+#endif
+                    var ms = _memoryStreamManager.GetStream() as RecyclableMemoryStream;
 
                     while (true)
                     {
                         result = await client.ReceiveAsync(buffer, token);
-                        var currentChunk = buffer.Array;
-                        var currentChunkSize = result.Count;
 
-                        var isFirstChunk = resultArrayWithTrailing == null;
-                        if (isFirstChunk)
-                        {
-                            // first chunk, use buffer as reference, do not allocate anything
-                            resultArraySize += currentChunkSize;
-                            resultArrayWithTrailing = currentChunk;
-                            isResultArrayCloned = false;
-                        }
-                        else if (currentChunk == null)
-                        {
-                            // weird chunk, do nothing
-                        }
-                        else
-                        {
-                            // received more chunks, lets merge them via memory stream
-                            if (ms == null)
-                            {
-                                // create memory stream and insert first chunk
-                                ms = new MemoryStream();
-                                ms.Write(resultArrayWithTrailing!, 0, resultArraySize);
-                            }
-
-                            // insert current chunk
-                            ms.Write(currentChunk, buffer.Offset, currentChunkSize);
-                        }
+#if NETSTANDARD2_0
+                        ms.Write(buffer.AsSpan(0, result.Count));
+#else
+                        ms.Write(buffer[..result.Count].Span);
+#endif
 
                         if (result.EndOfMessage)
-                        {
                             break;
-                        }
-
-                        if (isResultArrayCloned)
-                            continue;
-
-                        // we got more chunks incoming, need to clone first chunk
-                        resultArrayWithTrailing = resultArrayWithTrailing?.ToArray();
-                        isResultArrayCloned = true;
                     }
 
-                    ms?.Seek(0, SeekOrigin.Begin);
+                    ms.Seek(0, SeekOrigin.Begin);
 
                     ResponseMessage message;
+                    bool shouldDisposeStream = true;
+
                     if (result.MessageType == WebSocketMessageType.Text && IsTextMessageConversionEnabled)
                     {
-                        var data = ms != null ?
-                            GetEncoding().GetString(ms.ToArray()) :
-                            resultArrayWithTrailing != null ?
-                                GetEncoding().GetString(resultArrayWithTrailing, 0, resultArraySize) :
-                                null;
+                        var data = GetEncoding().GetString(ms.ToArray());
 
                         message = ResponseMessage.TextMessage(data);
                     }
@@ -547,18 +529,19 @@ namespace Websocket.Client
                     }
                     else
                     {
-                        if (ms != null)
+                        if (IsStreamDisposedAutomatically)
                         {
                             message = ResponseMessage.BinaryMessage(ms.ToArray());
                         }
                         else
                         {
-                            Array.Resize(ref resultArrayWithTrailing, resultArraySize);
-                            message = ResponseMessage.BinaryMessage(resultArrayWithTrailing);
+                            message = ResponseMessage.BinaryStreamMessage(ms);
+                            shouldDisposeStream = false;
                         }
                     }
 
-                    ms?.Dispose();
+                    if (shouldDisposeStream)
+                        ms.Dispose();
 
                     _logger.LogTrace(L("Received:  {message}"), Name, message);
                     _lastReceivedMsg = DateTime.UtcNow;

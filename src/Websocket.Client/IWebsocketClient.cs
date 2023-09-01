@@ -43,6 +43,13 @@ namespace Websocket.Client
         /// Default: 1 minute.
         /// </summary>
         TimeSpan? ErrorReconnectTimeout { get; set; }
+        
+        /// <summary>
+        /// Time range in ms, how long to wait before reconnecting if connection is lost with a transient error.
+        /// Set null to disable this feature. 
+        /// Default: 0 ms (immediately)
+        /// </summary>
+        TimeSpan? LostReconnectTimeout { get; set; }
 
         /// <summary>
         /// Get or set the name of the current websocket client instance.

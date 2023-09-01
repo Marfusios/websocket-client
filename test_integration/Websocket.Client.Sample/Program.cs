@@ -56,14 +56,14 @@ namespace Websocket.Client.Sample
                 client.ErrorReconnectTimeout = TimeSpan.FromSeconds(30);
                 client.ReconnectionHappened.Subscribe(info =>
                 {
-                    Log.Information($"Reconnection happened, type: {info.Type}, url: {client.Url}");
+                    Log.Information("Reconnection happened, type: {type}, url: {url}", info.Type, client.Url);
                 });
                 client.DisconnectionHappened.Subscribe(info =>
-                    Log.Warning($"Disconnection happened, type: {info.Type}"));
+                    Log.Warning("Disconnection happened, type: {type}", info.Type));
 
                 client.MessageReceived.Subscribe(msg =>
                 {
-                    Log.Information($"Message received: {msg}");
+                    Log.Information("Message received: {message}", msg);
                 });
 
                 Log.Information("Starting...");

@@ -227,5 +227,5 @@ with an example how to ignore/discard buffered messages and always process only 
 
 
 ### Available for help
-I do consulting, please don't hesitate to contact me if you have a custom solution you would like me to implement ([web](http://mkotas.cz/), 
-<m@mkotas.cz>)
+I do consulting, please don't hesitate to contact me if you have a custom solution you would like me to implement 
+([web](http://mkotas.cz/), [nostr](https://snort.social/p/npub1dd668dyr9un9nzf9fjjkpdcqmge584c86gceu7j97nsp4lj2pscs0xk075), <m@mkotas.cz>)

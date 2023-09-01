@@ -21,7 +21,14 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
     - name: Test
-      run: dotnet test --no-restore --verbosity normal
+      run: dotnet test --no-restore --logger "trx;LogFileName=tests.trx"
+    - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()    # run this step even if previous step failed
+        with:
+          name: xUnit Tests
+          path: '**/*.trx'
+          reporter: dotnet-trx
     - name: Pack library project
       run: dotnet pack src/Websocket.Client/Websocket.Client.csproj --no-build --configuration Release --include-symbols -p:SymbolPackageFormat=snupkg -o .
     - name: Publish library (NuGet)

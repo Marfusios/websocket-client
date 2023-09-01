@@ -2,7 +2,6 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
-using Websocket.Client.Models;
 
 namespace Websocket.Client
 {
@@ -15,6 +14,11 @@ namespace Websocket.Client
         /// Get or set target websocket url
         /// </summary>
         Uri Url { get; set; }
+
+        /// <summary>
+        /// Validate if an incoming message is from sub-protocol
+        /// </summary>        
+        Predicate< string> IsSubprotocolMessage { get; set; }
 
         /// <summary>
         /// Stream with received message (raw format)

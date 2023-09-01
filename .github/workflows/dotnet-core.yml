@@ -26,7 +26,7 @@ jobs:
       uses: dorny/test-reporter@v1
       if: success() || failure()    # run this step even if previous step failed
       with:
-        name: xUnit Tests
+        name: tests
         path: '**/*.trx'
         reporter: dotnet-trx
     - name: Pack library project

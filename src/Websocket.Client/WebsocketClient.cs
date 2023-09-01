@@ -100,23 +100,23 @@ namespace Websocket.Client
         public IObservable<DisconnectionInfo> DisconnectionHappened => _disconnectedSubject.AsObservable();
 
         /// <summary>
-        /// Time range in ms, how long to wait before reconnecting if no message comes from server.
+        /// Time range for how long to wait before reconnecting if no message comes from server.
         /// Set null to disable this feature. 
         /// Default: 1 minute
         /// </summary>
         public TimeSpan? ReconnectTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
-        /// Time range in ms, how long to wait before reconnecting if last reconnection failed.
+        /// Time range for how long to wait before reconnecting if last reconnection failed.
         /// Set null to disable this feature. 
         /// Default: 1 minute
         /// </summary>
         public TimeSpan? ErrorReconnectTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
-        /// Time range in ms, how long to wait before reconnecting if connection is lost with a transient error.
+        /// Time range for how long to wait before reconnecting if connection is lost with a transient error.
         /// Set null to disable this feature. 
-        /// Default: 0 ms (immediately)
+        /// Default: null/disabled (immediately)
         /// </summary>
         public TimeSpan? LostReconnectTimeout { get; set; }
 
@@ -572,7 +572,7 @@ namespace Websocket.Client
                 // reconnection already in progress or client stopped/disposed, do nothing
                 return;
             }
-            
+
             if (LostReconnectTimeout.HasValue)
             {
                 var timeout = LostReconnectTimeout.Value;

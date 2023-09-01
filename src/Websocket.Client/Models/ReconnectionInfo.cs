@@ -8,7 +8,9 @@ namespace Websocket.Client.Models
     /// </summary>
     public class ReconnectionInfo
     {
-        /// <inheritdoc />
+        /// <summary>
+        /// Info about happened reconnection
+        /// </summary>
         public ReconnectionInfo(ReconnectionType type)
         {
             Type = type;

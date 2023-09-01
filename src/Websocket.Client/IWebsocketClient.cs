@@ -20,7 +20,8 @@ namespace Websocket.Client
         /// Stream with received message (raw format)
         /// </summary>
         IObservable<ResponseMessage> MessageReceived { get; }
-            /// <summary>
+
+        /// <summary>
         /// Stream for reconnection event (triggered after the new connection) 
         /// </summary>
         IObservable<ReconnectionInfo> ReconnectionHappened { get; }
@@ -31,23 +32,23 @@ namespace Websocket.Client
         IObservable<DisconnectionInfo> DisconnectionHappened { get; }
 
         /// <summary>
-        /// Time range in ms, how long to wait before reconnecting if no message comes from server.
+        /// Time range for how long to wait before reconnecting if no message comes from server.
         /// Set null to disable this feature. 
         /// Default: 1 minute.
         /// </summary>
         TimeSpan? ReconnectTimeout { get; set; }
 
         /// <summary>
-        /// Time range in ms, how long to wait before reconnecting if last reconnection failed.
+        /// Time range for how long to wait before reconnecting if last reconnection failed.
         /// Set null to disable this feature. 
         /// Default: 1 minute.
         /// </summary>
         TimeSpan? ErrorReconnectTimeout { get; set; }
-        
+
         /// <summary>
-        /// Time range in ms, how long to wait before reconnecting if connection is lost with a transient error.
+        /// Time range for how long to wait before reconnecting if connection is lost with a transient error.
         /// Set null to disable this feature. 
-        /// Default: 0 ms (immediately)
+        /// Default: null/disabled (immediately)
         /// </summary>
         TimeSpan? LostReconnectTimeout { get; set; }
 
@@ -55,7 +56,7 @@ namespace Websocket.Client
         /// Get or set the name of the current websocket client instance.
         /// For logging purpose (in case you use more parallel websocket clients and want to distinguish between them)
         /// </summary>
-        string Name { get; set;}
+        string Name { get; set; }
 
         /// <summary>
         /// Returns true if Start() method was called at least once. False if not started or disposed

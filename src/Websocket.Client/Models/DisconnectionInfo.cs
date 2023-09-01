@@ -9,8 +9,10 @@ namespace Websocket.Client
     /// </summary>
     public class DisconnectionInfo
     {
-        /// <inheritdoc />
-        public DisconnectionInfo(DisconnectionType type, WebSocketCloseStatus? closeStatus, 
+        /// <summary>
+        /// Info about happened disconnection
+        /// </summary>
+        public DisconnectionInfo(DisconnectionType type, WebSocketCloseStatus? closeStatus,
             string closeStatusDescription, string subProtocol, Exception exception)
         {
             Type = type;
@@ -62,7 +64,7 @@ namespace Websocket.Client
         /// </summary>
         public static DisconnectionInfo Create(DisconnectionType type, WebSocket client, Exception exception)
         {
-            return new DisconnectionInfo(type, client?.CloseStatus, client?.CloseStatusDescription, 
+            return new DisconnectionInfo(type, client?.CloseStatus, client?.CloseStatusDescription,
                 client?.SubProtocol, exception);
         }
     }

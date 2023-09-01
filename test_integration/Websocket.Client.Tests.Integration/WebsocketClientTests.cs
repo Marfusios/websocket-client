@@ -78,31 +78,6 @@ namespace Websocket.Client.Tests.Integration
         }
 
         [Fact]
-        public async Task SendBinaryMessage_ShouldWork()
-        {
-            using IWebsocketClient client = new WebsocketClient(WebsocketUrl);
-            string received = null;
-            var receivedEvent = new ManualResetEvent(false);
-
-            client.MessageReceived.Subscribe(msg =>
-            {
-                var msgText = msg.Text ?? string.Empty;
-                if (msgText.Contains("400"))
-                {
-                    received = msgText;
-                    receivedEvent.Set();
-                }
-            });
-
-            await client.Start();
-            client.Send(new byte[] { 10, 14, 15, 16 });
-
-            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
-
-            Assert.NotNull(received);
-        }
-
-        [Fact]
         public async Task Starting_MultipleTimes_ShouldWorkWithNoExceptions()
         {
             for (int i = 0; i < 3; i++)

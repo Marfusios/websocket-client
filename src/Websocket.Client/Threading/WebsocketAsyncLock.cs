@@ -49,7 +49,7 @@ namespace Websocket.Client.Threading
             return waitTask.IsCompleted
                 ? _releaserTask
                 : waitTask.ContinueWith(
-                    (_, releaser) => (IDisposable)releaser,
+                    (_, releaser) => (IDisposable)releaser!,
                     _releaser,
                     CancellationToken.None,
                     TaskContinuationOptions.ExecuteSynchronously,

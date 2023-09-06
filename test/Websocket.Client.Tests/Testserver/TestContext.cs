@@ -1,7 +1,9 @@
 ﻿using System;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
+using Serilog.Extensions.Logging;
 using Xunit.Abstractions;
 
 namespace Websocket.Client.Tests.TestServer
@@ -9,11 +11,14 @@ namespace Websocket.Client.Tests.TestServer
     public class TestContext<TStartup> where TStartup : class
     {
         private readonly TestServerApplicationFactory<TStartup> _factory;
+        private readonly ILogger<WebsocketClient> _logger;
 
         public TestContext(ITestOutputHelper output)
         {
             _factory = new TestServerApplicationFactory<TStartup>();
-            InitLogging(output);
+            var factory = InitLogging(output);
+            if (factory != null)
+                _logger = factory.CreateLogger<WebsocketClient>();
         }
 
         public WebSocketClient NativeTestClient { get; set; }
@@ -33,7 +38,7 @@ namespace Websocket.Client.Tests.TestServer
                 Scheme = "ws",
                 Path = "ws"
             }.Uri;
-            return new WebsocketClient(wsUri,
+            return new WebsocketClient(wsUri, _logger,
                 async (uri, token) =>
                 {
                     if (_factory.Server == null)
@@ -60,19 +65,21 @@ namespace Websocket.Client.Tests.TestServer
                 Scheme = "ws",
                 Path = "ws"
             }.Uri;
-            return new WebsocketClient(wsUri,
+            return new WebsocketClient(wsUri, _logger,
                 (uri, token) => throw new InvalidOperationException("Connection to websocket server failed, check url"));
         }
 
-        private void InitLogging(ITestOutputHelper output)
+        private SerilogLoggerFactory InitLogging(ITestOutputHelper output)
         {
             if (output == null)
-                return;
+                return null;
 
-            Log.Logger = new LoggerConfiguration()
+            var logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .WriteTo.TestOutput(output, LogEventLevel.Verbose)
                 .CreateLogger();
+            Log.Logger = logger;
+            return new SerilogLoggerFactory(logger);
         }
     }
 }

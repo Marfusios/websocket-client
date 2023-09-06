@@ -1,7 +1,5 @@
-﻿using System;
-
-// ReSharper disable once CheckNamespace
-namespace Websocket.Client.Models
+﻿// ReSharper disable once CheckNamespace
+namespace Websocket.Client
 {
     /// <summary>
     /// Info about happened reconnection

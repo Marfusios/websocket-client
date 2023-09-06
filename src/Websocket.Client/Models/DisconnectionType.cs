@@ -19,7 +19,7 @@ namespace Websocket.Client
         /// <summary>
         /// Type used when connection to websocket was lost by not receiving any message in given time-range
         /// </summary>
-        NoMessageReceived = 2, 
+        NoMessageReceived = 2,
 
         /// <summary>
         /// Type used when connection or reconnection returned error

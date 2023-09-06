@@ -7,7 +7,7 @@ namespace Websocket.Client
     /// </summary>
     public class ResponseMessage
     {
-        private ResponseMessage(byte[] binary, string text, WebSocketMessageType messageType)
+        private ResponseMessage(byte[]? binary, string? text, WebSocketMessageType messageType)
         {
             Binary = binary;
             Text = text;
@@ -17,12 +17,12 @@ namespace Websocket.Client
         /// <summary>
         /// Received text message (only if type = WebSocketMessageType.Text)
         /// </summary>
-        public string Text { get; }
+        public string? Text { get; }
 
         /// <summary>
         /// Received text message (only if type = WebSocketMessageType.Binary)
         /// </summary>
-        public byte[] Binary { get; }
+        public byte[]? Binary { get; }
 
         /// <summary>
         /// Current message type (Text or Binary)
@@ -36,7 +36,7 @@ namespace Websocket.Client
         {
             if (MessageType == WebSocketMessageType.Text)
             {
-                return Text;
+                return Text ?? string.Empty;
             }
 
             return $"Type binary, length: {Binary?.Length}";
@@ -45,7 +45,7 @@ namespace Websocket.Client
         /// <summary>
         /// Create text response message
         /// </summary>
-        public static ResponseMessage TextMessage(string data)
+        public static ResponseMessage TextMessage(string? data)
         {
             return new ResponseMessage(null, data, WebSocketMessageType.Text);
         }
@@ -53,7 +53,7 @@ namespace Websocket.Client
         /// <summary>
         /// Create binary response message
         /// </summary>
-        public static ResponseMessage BinaryMessage(byte[] data)
+        public static ResponseMessage BinaryMessage(byte[]? data)
         {
             return new ResponseMessage(data, null, WebSocketMessageType.Binary);
         }

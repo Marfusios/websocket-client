@@ -2,7 +2,6 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
-using Websocket.Client.Models;
 
 namespace Websocket.Client
 {
@@ -56,7 +55,7 @@ namespace Websocket.Client
         /// Get or set the name of the current websocket client instance.
         /// For logging purpose (in case you use more parallel websocket clients and want to distinguish between them)
         /// </summary>
-        string Name { get; set; }
+        string? Name { get; set; }
 
         /// <summary>
         /// Returns true if Start() method was called at least once. False if not started or disposed
@@ -83,13 +82,13 @@ namespace Websocket.Client
         /// Returns currently used native websocket client.
         /// Use with caution, on every reconnection there will be a new instance. 
         /// </summary>
-        ClientWebSocket NativeClient { get; }
+        ClientWebSocket? NativeClient { get; }
 
         /// <summary>
         /// Sets used encoding for sending and receiving text messages. 
         /// Default: UTF8
         /// </summary>
-        Encoding MessageEncoding { get; set; }
+        Encoding? MessageEncoding { get; set; }
 
         /// <summary>
         /// Start listening to the websocket stream on the background thread.

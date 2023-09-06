@@ -5,8 +5,10 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
+using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Websocket.Client.Sample
@@ -17,7 +19,7 @@ namespace Websocket.Client.Sample
 
         private static void Main()
         {
-            InitLogging();
+            var logFactory = InitLogging();
 
             AppDomain.CurrentDomain.ProcessExit += CurrentDomainOnProcessExit;
             AssemblyLoadContext.Default.Unloading += DefaultOnUnloading;
@@ -32,6 +34,7 @@ namespace Websocket.Client.Sample
             Log.Debug("              STARTING              ");
             Log.Debug("====================================");
 
+            var logger = logFactory.CreateLogger<WebsocketClient>();
             var factory = new Func<ClientWebSocket>(() =>
             {
                 var client = new ClientWebSocket
@@ -49,7 +52,7 @@ namespace Websocket.Client.Sample
 
             var url = new Uri("wss://www.bitmex.com/realtime");
 
-            using (IWebsocketClient client = new WebsocketClient(url, factory))
+            using (IWebsocketClient client = new WebsocketClient(url, logger, factory))
             {
                 client.Name = "Bitmex";
                 client.ReconnectTimeout = TimeSpan.FromSeconds(30);
@@ -110,17 +113,19 @@ namespace Websocket.Client.Sample
             }
         }
 
-        private static void InitLogging()
+        private static SerilogLoggerFactory InitLogging()
         {
             var executingDir = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
             var logPath = Path.Combine(executingDir ?? string.Empty, "logs", "verbose.log");
-            Log.Logger = new LoggerConfiguration()
+            var logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
                 .WriteTo.Console(LogEventLevel.Verbose,
                     theme: AnsiConsoleTheme.Literate,
                     outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message} {NewLine}{Exception}")
                 .CreateLogger();
+            Log.Logger = logger;
+            return new SerilogLoggerFactory(logger);
         }
 
         private static void CurrentDomainOnProcessExit(object sender, EventArgs eventArgs)

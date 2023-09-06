@@ -13,7 +13,7 @@ namespace Websocket.Client
         /// Info about happened disconnection
         /// </summary>
         public DisconnectionInfo(DisconnectionType type, WebSocketCloseStatus? closeStatus,
-            string closeStatusDescription, string subProtocol, Exception exception)
+            string? closeStatusDescription, string? subProtocol, Exception? exception)
         {
             Type = type;
             CloseStatus = closeStatus;
@@ -35,17 +35,17 @@ namespace Websocket.Client
         /// <summary>
         /// Allows the remote endpoint to describe the reason why the connection was closed 
         /// </summary>
-        public string CloseStatusDescription { get; }
+        public string? CloseStatusDescription { get; }
 
         /// <summary>
         /// The subprotocol that was negotiated during the opening handshake
         /// </summary>
-        public string SubProtocol { get; }
+        public string? SubProtocol { get; }
 
         /// <summary>
         /// Exception that cause disconnection, can be null
         /// </summary>
-        public Exception Exception { get; }
+        public Exception? Exception { get; }
 
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace Websocket.Client
         /// <summary>
         /// Simple factory method
         /// </summary>
-        public static DisconnectionInfo Create(DisconnectionType type, WebSocket client, Exception exception)
+        public static DisconnectionInfo Create(DisconnectionType type, WebSocket? client, Exception? exception)
         {
             return new DisconnectionInfo(type, client?.CloseStatus, client?.CloseStatusDescription,
                 client?.SubProtocol, exception);

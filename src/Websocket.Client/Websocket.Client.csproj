@@ -11,8 +11,8 @@
 		<PackageTags>websockets websocket client</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/Marfusios/websocket-client</PackageProjectUrl>
-		<PackageIconUrl>https://raw.githubusercontent.com/Marfusios/websocket-client/master/src/Websocket.Client/icon.png</PackageIconUrl>
-		<PackageIcon>icon.png</PackageIcon>
+		<PackageIconUrl>https://raw.githubusercontent.com/Marfusios/websocket-client/master/src/Websocket.Client/icon-modern.png</PackageIconUrl>
+		<PackageIcon>icon-modern.png</PackageIcon>
 		<RepositoryUrl>https://github.com/Marfusios/websocket-client</RepositoryUrl>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryType>Git</RepositoryType>

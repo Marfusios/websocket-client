@@ -27,6 +27,8 @@ namespace Websocket.Client
         private Timer? _lastChanceTimer;
         private DateTime _lastReceivedMsg = DateTime.UtcNow;
 
+        private Timer? _errorReconnectTimer;
+
         private bool _disposing;
         private bool _reconnecting;
         private bool _stopping;
@@ -195,6 +197,7 @@ namespace Websocket.Client
                 _messagesTextToSendQueue.Writer.Complete();
                 _messagesBinaryToSendQueue.Writer.Complete();
                 _lastChanceTimer?.Dispose();
+                _errorReconnectTimer?.Dispose();
                 _cancellation?.Cancel();
                 _cancellationTotal?.Cancel();
                 _client?.Abort();
@@ -417,9 +420,15 @@ namespace Websocket.Client
                 var timeout = ErrorReconnectTimeout.Value;
                 _logger.LogError(e, L("Exception while connecting. " +
                                    "Waiting {timeout} sec before next reconnection try. Error: '{error}'"), Name, timeout.TotalSeconds, e.Message);
-                await Task.Delay(timeout, token).ConfigureAwait(false);
-                await Reconnect(ReconnectionType.Error, false, e).ConfigureAwait(false);
+                _errorReconnectTimer?.Dispose();
+                _errorReconnectTimer = new Timer(ReconnectOnError, e, timeout, Timeout.InfiniteTimeSpan);
             }
+        }
+
+        private void ReconnectOnError(object? state)
+        {
+            // await Task.Delay(timeout, token).ConfigureAwait(false);
+            _ = Reconnect(ReconnectionType.Error, false, state as Exception).ConfigureAwait(false);
         }
 
         private bool IsClientConnected()

@@ -74,7 +74,7 @@ But use it with caution, on every reconnection there will be a new instance.
 
 It is possible to change the remote server URL dynamically. Example: 
 
-```chsarp
+```csharp
 client.Url = new Uri("wss://my_new_url");;
 await client.Reconnect();
 ```
@@ -84,13 +84,20 @@ await client.Reconnect();
 
 A built-in reconnection invokes after 1 minute (default) of not receiving any messages from the server. 
 It is possible to configure that timeout via `communicator.ReconnectTimeout`. 
-Also, a stream `ReconnectionHappened` sends information about a type of reconnection. 
+In addition, a stream `ReconnectionHappened` sends information about the type of reconnection. 
 However, if you are subscribed to low-rate channels, you will likely encounter that timeout - higher it to a few minutes or implement `ping-pong` interaction on your own every few seconds. 
 
 In the case of a remote server outage, there is a built-in functionality that slows down reconnection requests 
 (could be configured via `client.ErrorReconnectTimeout`, the default is 1 minute).
 
-Beware that you **need to resubscribe to channels** after reconnection happens. You should subscribe to `ReconnectionHappened` stream and send subscription requests. 
+Usually, websocket servers do not keep a persistent connection between reconnections. Every new connection creates a new session. 
+Because of that, you most likely **need to resubscribe to channels/groups/topics** inside `ReconnectionHappened` stream. 
+
+```csharp
+client.ReconnectionHappened.Subscribe(info => {
+    client.Send("{type: subscribe, topic: xyz}")
+});
+```
 
 
 ### Multi-threading
@@ -227,5 +234,5 @@ with an example how to ignore/discard buffered messages and always process only 
 
 
 ### Available for help
-I do consulting, please don't hesitate to contact me if you have a custom solution you would like me to implement 
+I do consulting, please don't hesitate to contact me if you need a paid help  
 ([web](http://mkotas.cz/), [nostr](https://snort.social/p/npub1dd668dyr9un9nzf9fjjkpdcqmge584c86gceu7j97nsp4lj2pscs0xk075), <m@mkotas.cz>)

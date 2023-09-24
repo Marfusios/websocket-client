@@ -299,24 +299,7 @@ namespace Websocket.Client
             }
 
             _logger.LogTrace(L("Sending: {message}"), Name, message);
-#if NETSTANDARD2_0
-            ArraySegment<byte> payload;
 
-            switch (message)
-            {
-                case RequestTextMessage textMessage:
-                    payload = new ArraySegment<byte>(GetEncoding().GetBytes(textMessage.Text));
-                    break;
-                case RequestBinaryMessage binaryMessage:
-                    payload = new ArraySegment<byte>(binaryMessage.Data);
-                    break;
-                case RequestBinarySegmentMessage segmentMessage:
-                    payload = segmentMessage.Data;
-                    break;
-                default:
-                    throw new ArgumentException($"Unknown message type: {message.GetType()}");
-            }
-#else
             ReadOnlyMemory<byte> payload;
 
             switch (message)
@@ -333,7 +316,6 @@ namespace Websocket.Client
                 default:
                     throw new ArgumentException($"Unknown message type: {message.GetType()}");
             }
-#endif
 
             await _client!
                 .SendAsync(payload, WebSocketMessageType.Text, true, _cancellation?.Token ?? CancellationToken.None)

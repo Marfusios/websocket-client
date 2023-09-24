@@ -453,30 +453,17 @@ namespace Websocket.Client
             {
                 // define buffer here and reuse, to avoid more allocation
                 const int chunkSize = 1024 * 4;
-#if NETSTANDARD2_0
-                var buffer = new ArraySegment<byte>(new byte[chunkSize]);
-#else
                 var buffer = new Memory<byte>(new byte[chunkSize]);
-#endif
 
                 do
                 {
-#if NETSTANDARD2_0
-                    WebSocketReceiveResult result;
-#else
                     ValueWebSocketReceiveResult result;
-#endif
                     var ms = _memoryStreamManager.GetStream() as RecyclableMemoryStream;
 
                     while (true)
                     {
                         result = await client.ReceiveAsync(buffer, token);
-
-#if NETSTANDARD2_0
-                        ms.Write(buffer.AsSpan(0, result.Count));
-#else
-                        ms.Write(buffer[..result.Count].Span);
-#endif
+                        ms!.Write(buffer[..result.Count].Span);
 
                         if (result.EndOfMessage)
                             break;

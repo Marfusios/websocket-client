@@ -1,4 +1,5 @@
-﻿using System.Net.WebSockets;
+﻿using System.IO;
+using System.Net.WebSockets;
 
 namespace Websocket.Client
 {
@@ -7,22 +8,30 @@ namespace Websocket.Client
     /// </summary>
     public class ResponseMessage
     {
-        private ResponseMessage(byte[]? binary, string? text, WebSocketMessageType messageType)
+        private readonly byte[]? _binary;
+
+        private ResponseMessage(MemoryStream? memoryStream, byte[]? binary, string? text, WebSocketMessageType messageType)
         {
-            Binary = binary;
+            Stream = memoryStream;
+            _binary = binary;
             Text = text;
             MessageType = messageType;
         }
 
         /// <summary>
-        /// Received text message (only if type = WebSocketMessageType.Text)
+        /// Received text message (only if type = <see cref="WebSocketMessageType.Text"/>)
         /// </summary>
         public string? Text { get; }
 
         /// <summary>
-        /// Received text message (only if type = WebSocketMessageType.Binary)
+        /// Received text message (only if type = <see cref="WebSocketMessageType.Binary"/>)
         /// </summary>
-        public byte[]? Binary { get; }
+        public byte[]? Binary => Stream is null ? _binary : Stream.ToArray();
+
+        /// <summary>
+        /// Received stream message (only if type = <see cref="WebSocketMessageType.Binary"/> and <see cref="WebsocketClient.IsStreamDisposedAutomatically"/> = false)
+        /// </summary>
+        public MemoryStream? Stream { get; }
 
         /// <summary>
         /// Current message type (Text or Binary)
@@ -47,7 +56,7 @@ namespace Websocket.Client
         /// </summary>
         public static ResponseMessage TextMessage(string? data)
         {
-            return new ResponseMessage(null, data, WebSocketMessageType.Text);
+            return new ResponseMessage(null, null, data, WebSocketMessageType.Text);
         }
 
         /// <summary>
@@ -55,7 +64,15 @@ namespace Websocket.Client
         /// </summary>
         public static ResponseMessage BinaryMessage(byte[]? data)
         {
-            return new ResponseMessage(data, null, WebSocketMessageType.Binary);
+            return new ResponseMessage(null, data, null, WebSocketMessageType.Binary);
+        }
+
+        /// <summary>
+        /// Create stream response message
+        /// </summary>
+        public static ResponseMessage BinaryStreamMessage(MemoryStream? memoryStream)
+        {
+            return new ResponseMessage(memoryStream, null, null, WebSocketMessageType.Binary);
         }
     }
 }

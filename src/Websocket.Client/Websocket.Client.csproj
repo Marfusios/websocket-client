@@ -29,6 +29,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+		<PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.3.2" />
 		<PackageReference Include="System.Reactive" Version="6.0.0" />
 		<PackageReference Include="System.Threading.Channels" Version="7.0.0" />
 	</ItemGroup>

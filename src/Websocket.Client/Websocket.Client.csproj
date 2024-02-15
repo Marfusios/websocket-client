@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.1;net6;net7</TargetFrameworks>
+		<TargetFrameworks>netstandard2.1;net6;net7;net8</TargetFrameworks>
 		<PackageId>Websocket.Client</PackageId>
 		<Authors>Mariusz Kotas</Authors>
 		<Description>Client for websocket API with built-in reconnection and error handling</Description>
@@ -28,10 +28,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
-		<PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.3.2" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+		<PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.0" />
 		<PackageReference Include="System.Reactive" Version="6.0.0" />
-		<PackageReference Include="System.Threading.Channels" Version="7.0.0" />
+		<PackageReference Include="System.Threading.Channels" Version="8.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

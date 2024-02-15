@@ -120,24 +120,27 @@ namespace Websocket.Client
 
         /// <summary>
         /// Send message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// It inserts the message to the queue and actual sending is done on another thread
         /// </summary>
         /// <param name="message">Message to be sent</param>
-        void Send(string message);
+        /// <returns>true if the message was written to the queue</returns>
+        bool Send(string message);
 
         /// <summary>
         /// Send binary message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// It inserts the message to the queue and actual sending is done on another thread
         /// </summary>
         /// <param name="message">Binary message to be sent</param>
-        void Send(byte[] message);
+        /// <returns>true if the message was written to the queue</returns>
+        bool Send(byte[] message);
 
         /// <summary>
         /// Send binary message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// It inserts the message to the queue and actual sending is done on another thread
         /// </summary>
         /// <param name="message">Binary message to be sent</param>
-        void Send(ArraySegment<byte> message);
+        /// <returns>true if the message was written to the queue</returns>
+        bool Send(ArraySegment<byte> message);
 
         /// <summary>
         /// Send message to the websocket channel. 
@@ -156,6 +159,24 @@ namespace Websocket.Client
         /// </summary>
         /// <param name="message">Message to be sent</param>
         Task SendInstant(byte[] message);
+
+        /// <summary>
+        /// Send already converted text message to the websocket channel. 
+        /// Use this method to avoid double serialization of the text message.
+        /// It inserts the message to the queue and actual sending is done on another thread
+        /// </summary>
+        /// <param name="message">Message to be sent</param>
+        /// <returns>true if the message was written to the queue</returns>
+        bool SendAsText(byte[] message);
+
+        /// <summary>
+        /// Send already converted text message to the websocket channel. 
+        /// Use this method to avoid double serialization of the text message.
+        /// It inserts the message to the queue and actual sending is done on another thread
+        /// </summary>
+        /// <param name="message">Message to be sent</param>
+        /// <returns>true if the message was written to the queue</returns>
+        bool SendAsText(ArraySegment<byte> message);
 
         /// <summary>
         /// Force reconnection. 

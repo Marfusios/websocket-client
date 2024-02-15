@@ -458,12 +458,12 @@ namespace Websocket.Client
                 do
                 {
                     ValueWebSocketReceiveResult result;
-                    var ms = _memoryStreamManager.GetStream() as RecyclableMemoryStream;
+                    var ms = (RecyclableMemoryStream)_memoryStreamManager.GetStream();
 
                     while (true)
                     {
                         result = await client.ReceiveAsync(buffer, token);
-                        ms!.Write(buffer[..result.Count].Span);
+                        ms.Write(buffer[..result.Count].Span);
 
                         if (result.EndOfMessage)
                             break;
@@ -477,7 +477,6 @@ namespace Websocket.Client
                     if (result.MessageType == WebSocketMessageType.Text && IsTextMessageConversionEnabled)
                     {
                         var data = GetEncoding().GetString(ms.ToArray());
-
                         message = ResponseMessage.TextMessage(data);
                     }
                     else if (result.MessageType == WebSocketMessageType.Close)

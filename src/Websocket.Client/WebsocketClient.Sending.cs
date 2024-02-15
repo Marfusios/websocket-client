@@ -24,77 +24,41 @@ namespace Websocket.Client
 
         /// <summary>
         /// Send text message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// It inserts the message to the queue and actual sending is done on another thread
         /// </summary>
         /// <param name="message">Text message to be sent</param>
-        public void Send(string message)
+        /// <returns>true if the message was written to the queue</returns>
+        public bool Send(string message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            _messagesTextToSendQueue.Writer.TryWrite(new RequestTextMessage(message));
+            return _messagesTextToSendQueue.Writer.TryWrite(new RequestTextMessage(message));
         }
 
         /// <summary>
         /// Send binary message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// It inserts the message to the queue and actual sending is done on another thread
         /// </summary>
         /// <param name="message">Binary message to be sent</param>
-        public void Send(byte[] message)
+        /// <returns>true if the message was written to the queue</returns>
+        public bool Send(byte[] message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            _messagesBinaryToSendQueue.Writer.TryWrite(new ArraySegment<byte>(message));
+            return _messagesBinaryToSendQueue.Writer.TryWrite(new ArraySegment<byte>(message));
         }
 
         /// <summary>
         /// Send binary message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// It inserts the message to the queue and actual sending is done on another thread
         /// </summary>
         /// <param name="message">Binary message to be sent</param>
-        public void Send(ArraySegment<byte> message)
+        /// <returns>true if the message was written to the queue</returns>
+        public bool Send(ArraySegment<byte> message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            _messagesBinaryToSendQueue.Writer.TryWrite(message);
-        }
-
-        /// <summary>
-        /// Send text message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
-        /// </summary>
-        /// <param name="message">Text message to be sent</param>
-        /// <param name="cancellationToken">The cancellationToken enables graceful cancellation of asynchronous operations</param>
-        public ValueTask SendAsync(string message, CancellationToken cancellationToken = default)
-        {
-            Validations.Validations.ValidateInput(message, nameof(message));
-
-            return _messagesTextToSendQueue.Writer.WriteAsync(new RequestTextMessage(message), cancellationToken);
-        }
-
-        /// <summary>
-        /// Send binary message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
-        /// </summary>
-        /// <param name="message">Binary message to be sent</param>
-        /// <param name="cancellationToken">The cancellationToken enables graceful cancellation of asynchronous operations</param>
-        public ValueTask SendAsync(byte[] message, CancellationToken cancellationToken = default)
-        {
-            Validations.Validations.ValidateInput(message, nameof(message));
-
-            return _messagesBinaryToSendQueue.Writer.WriteAsync(new ArraySegment<byte>(message), cancellationToken);
-        }
-
-        /// <summary>
-        /// Send binary message to the websocket channel. 
-        /// It inserts the message to the queue and actual sending is done on an other thread
-        /// </summary>
-        /// <param name="message">Binary message to be sent</param>
-        /// <param name="cancellationToken">The cancellationToken enables graceful cancellation of asynchronous operations</param>
-        public ValueTask SendAsync(ArraySegment<byte> message, CancellationToken cancellationToken = default)
-        {
-            Validations.Validations.ValidateInput(message, nameof(message));
-
-            return _messagesBinaryToSendQueue.Writer.WriteAsync(message, cancellationToken);
+            return _messagesBinaryToSendQueue.Writer.TryWrite(message);
         }
 
         /// <summary>
@@ -126,62 +90,36 @@ namespace Websocket.Client
         /// <summary>
         /// Send already converted text message to the websocket channel. 
         /// Use this method to avoid double serialization of the text message.
-        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// It inserts the message to the queue and actual sending is done on another thread
         /// </summary>
         /// <param name="message">Message to be sent</param>
-        public void SendTextAsBinary(byte[] message)
+        /// <returns>true if the message was written to the queue</returns>
+        public bool SendAsText(byte[] message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            _messagesTextToSendQueue.Writer.TryWrite(new RequestBinaryMessage(message));
+            return _messagesTextToSendQueue.Writer.TryWrite(new RequestBinaryMessage(message));
         }
 
         /// <summary>
         /// Send already converted text message to the websocket channel. 
         /// Use this method to avoid double serialization of the text message.
-        /// It inserts the message to the queue and actual sending is done on an other thread
+        /// It inserts the message to the queue and actual sending is done on another thread
         /// </summary>
         /// <param name="message">Message to be sent</param>
-        public void SendTextAsBinary(ArraySegment<byte> message)
+        /// <returns>true if the message was written to the queue</returns>
+        public bool SendAsText(ArraySegment<byte> message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            _messagesTextToSendQueue.Writer.TryWrite(new RequestBinarySegmentMessage(message));
-        }
-
-        /// <summary>
-        /// Send already converted text message to the websocket channel. 
-        /// Use this method to avoid double serialization of the text message.
-        /// It inserts the message to the queue and actual sending is done on an other thread
-        /// </summary>
-        /// <param name="message">Message to be sent</param>
-        /// <param name="cancellationToken">The cancellationToken enables graceful cancellation of asynchronous operations</param>
-        public ValueTask SendTextAsBinaryAsync(byte[] message, CancellationToken cancellationToken = default)
-        {
-            Validations.Validations.ValidateInput(message, nameof(message));
-
-            return _messagesTextToSendQueue.Writer.WriteAsync(new RequestBinaryMessage(message), cancellationToken);
-        }
-
-        /// <summary>
-        /// Send already converted text message to the websocket channel. 
-        /// Use this method to avoid double serialization of the text message.
-        /// It inserts the message to the queue and actual sending is done on an other thread
-        /// </summary>
-        /// <param name="message">Message to be sent</param>
-        /// <param name="cancellationToken">The cancellationToken enables graceful cancellation of asynchronous operations</param>
-        public ValueTask SendTextAsBinaryAsync(ArraySegment<byte> message, CancellationToken cancellationToken = default)
-        {
-            Validations.Validations.ValidateInput(message, nameof(message));
-
-            return _messagesTextToSendQueue.Writer.WriteAsync(new RequestBinarySegmentMessage(message), cancellationToken);
+            return _messagesTextToSendQueue.Writer.TryWrite(new RequestBinarySegmentMessage(message));
         }
 
         /// <summary>
         /// Stream/publish fake message (via 'MessageReceived' observable).
         /// Use for testing purposes to simulate a server message. 
         /// </summary>
-        /// <param name="message">Message to be stream</param>
+        /// <param name="message">Message to be streamed</param>
         public void StreamFakeMessage(ResponseMessage message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));

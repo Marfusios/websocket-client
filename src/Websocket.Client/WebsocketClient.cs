@@ -237,9 +237,9 @@ namespace Websocket.Client
         /// In case of connection error it doesn't throw an exception.
         /// Only streams a message via 'DisconnectionHappened' and logs it. 
         /// </summary>
-        public Task Start()
+        public Task Start(CancellationToken cancellation = default)
         {
-            return StartInternal(false);
+            return StartInternal(false, cancellation);
         }
 
         /// <summary>
@@ -247,9 +247,9 @@ namespace Websocket.Client
         /// In case of connection error it throws an exception.
         /// Fail fast approach. 
         /// </summary>
-        public Task StartOrFail()
+        public Task StartOrFail(CancellationToken cancellation = default)
         {
-            return StartInternal(true);
+            return StartInternal(true, cancellation);
         }
 
         /// <summary>
@@ -257,13 +257,13 @@ namespace Websocket.Client
         /// Method doesn't throw exception, only logs it and mark client as closed. 
         /// </summary>
         /// <returns>Returns true if close was initiated successfully</returns>
-        public async Task<bool> Stop(WebSocketCloseStatus status, string statusDescription)
+        public async Task<bool> Stop(WebSocketCloseStatus status, string statusDescription, CancellationToken cancellation = default)
         {
             var result = await StopInternal(
                 _client,
                 status,
                 statusDescription,
-                null,
+                cancellation,
                 false,
                 false).ConfigureAwait(false);
             _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
@@ -275,13 +275,13 @@ namespace Websocket.Client
         /// Method could throw exceptions, but client is marked as closed anyway.
         /// </summary>
         /// <returns>Returns true if close was initiated successfully</returns>
-        public async Task<bool> StopOrFail(WebSocketCloseStatus status, string statusDescription)
+        public async Task<bool> StopOrFail(WebSocketCloseStatus status, string statusDescription, CancellationToken cancellation = default)
         {
             var result = await StopInternal(
                 _client,
                 status,
                 statusDescription,
-                null,
+                cancellation,
                 true,
                 false).ConfigureAwait(false);
             _disconnectedSubject.OnNext(DisconnectionInfo.Create(DisconnectionType.ByUser, _client, null));
@@ -301,7 +301,7 @@ namespace Websocket.Client
             });
         }
 
-        private async Task StartInternal(bool failFast)
+        private async Task StartInternal(bool failFast, CancellationToken cancellation)
         {
             if (_disposing)
             {
@@ -317,7 +317,7 @@ namespace Websocket.Client
             IsStarted = true;
 
             _logger.LogDebug(L("Starting.."), Name);
-            _cancellation = new CancellationTokenSource();
+            _cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
             _cancellationTotal = new CancellationTokenSource();
 
             await StartClient(_url, _cancellation.Token, ReconnectionType.Initial, failFast).ConfigureAwait(false);
@@ -438,7 +438,7 @@ namespace Websocket.Client
         private void ReconnectOnError(object? state)
         {
             // await Task.Delay(timeout, token).ConfigureAwait(false);
-            _ = Reconnect(ReconnectionType.Error, false, state as Exception).ConfigureAwait(false);
+            _ = Reconnect(ReconnectionType.Error, false, state as Exception, _cancellation?.Token ?? CancellationToken.None).ConfigureAwait(false);
         }
 
         private bool IsClientConnected()
@@ -508,7 +508,7 @@ namespace Websocket.Client
                         // reconnect if enabled
                         if (IsReconnectionEnabled && !ShouldIgnoreReconnection(client))
                         {
-                            _ = ReconnectSynchronized(ReconnectionType.Lost, false, null);
+                            _ = ReconnectSynchronized(ReconnectionType.Lost, false, null, token);
                         }
 
                         return;
@@ -571,7 +571,7 @@ namespace Websocket.Client
             }
 
             // listening thread is lost, we have to reconnect
-            _ = ReconnectSynchronized(ReconnectionType.Lost, false, causedException);
+            _ = ReconnectSynchronized(ReconnectionType.Lost, false, causedException, token);
         }
 
         private bool ShouldIgnoreReconnection(WebSocket client)

@@ -68,11 +68,12 @@ namespace Websocket.Client
         /// on the full .NET Framework platform
         /// </summary>
         /// <param name="message">Message to be sent</param>
-        public Task SendInstant(string message)
+        /// <param name="cancellation">Cancellation token</param>
+        public Task SendInstant(string message, CancellationToken cancellation)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            return SendInternalSynchronized(new RequestTextMessage(message));
+            return SendInternalSynchronized(new RequestTextMessage(message), cancellation);
         }
 
         /// <summary>
@@ -82,9 +83,10 @@ namespace Websocket.Client
         /// on the full .NET Framework platform
         /// </summary>
         /// <param name="message">Message to be sent</param>
-        public Task SendInstant(byte[] message)
+        /// <param name="cancellation">Cancellation token</param>
+        public Task SendInstant(byte[] message, CancellationToken cancellation)
         {
-            return SendInternalSynchronized(new ArraySegment<byte>(message));
+            return SendInternalSynchronized(new ArraySegment<byte>(message), cancellation);
         }
 
         /// <summary>
@@ -138,7 +140,7 @@ namespace Websocket.Client
                     {
                         try
                         {
-                            await SendInternalSynchronized(message).ConfigureAwait(false);
+                            await SendInternalSynchronized(message, _cancellationTotal?.Token ?? CancellationToken.None).ConfigureAwait(false);
                         }
                         catch (Exception e)
                         {
@@ -179,7 +181,7 @@ namespace Websocket.Client
                     {
                         try
                         {
-                            await SendInternalSynchronized(message).ConfigureAwait(false);
+                            await SendInternalSynchronized(message, _cancellationTotal?.Token ?? CancellationToken.None).ConfigureAwait(false);
                         }
                         catch (Exception e)
                         {
@@ -220,15 +222,15 @@ namespace Websocket.Client
             _ = Task.Factory.StartNew(_ => SendBinaryFromQueue(), TaskCreationOptions.LongRunning, _cancellationTotal?.Token ?? CancellationToken.None);
         }
 
-        private async Task SendInternalSynchronized(RequestMessage message)
+        private async Task SendInternalSynchronized(RequestMessage message, CancellationToken cancellation)
         {
-            using (await _locker.LockAsync())
+            using (await _locker.LockAsync(cancellation))
             {
-                await SendInternal(message);
+                await SendInternal(message, cancellation);
             }
         }
 
-        private async Task SendInternal(RequestMessage message)
+        private async Task SendInternal(RequestMessage message, CancellationToken cancellation)
         {
             if (!IsClientConnected())
             {
@@ -255,20 +257,21 @@ namespace Websocket.Client
                     throw new ArgumentException($"Unknown message type: {message.GetType()}");
             }
 
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _cancellation?.Token ?? CancellationToken.None);
             await _client!
-                .SendAsync(payload, WebSocketMessageType.Text, true, _cancellation?.Token ?? CancellationToken.None)
+                .SendAsync(payload, WebSocketMessageType.Text, true, cts.Token)
                 .ConfigureAwait(false);
         }
 
-        private async Task SendInternalSynchronized(ArraySegment<byte> message)
+        private async Task SendInternalSynchronized(ArraySegment<byte> message, CancellationToken cancellation)
         {
-            using (await _locker.LockAsync())
+            using (await _locker.LockAsync(cancellation))
             {
-                await SendInternal(message);
+                await SendInternal(message, cancellation);
             }
         }
 
-        private async Task SendInternal(ArraySegment<byte> payload)
+        private async Task SendInternal(ArraySegment<byte> payload, CancellationToken cancellation)
         {
             if (!IsClientConnected())
             {
@@ -279,7 +282,7 @@ namespace Websocket.Client
             _logger.LogTrace(L("Sending binary, length: {length}"), Name, payload.Count);
 
             await _client!
-                .SendAsync(payload, WebSocketMessageType.Binary, true, _cancellation?.Token ?? CancellationToken.None)
+                .SendAsync(payload, WebSocketMessageType.Binary, true, cancellation)
                 .ConfigureAwait(false);
         }
     }

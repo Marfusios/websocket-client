@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.WebSockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Websocket.Client
@@ -95,28 +96,28 @@ namespace Websocket.Client
         /// In case of connection error it doesn't throw an exception.
         /// Only streams a message via 'DisconnectionHappened' and logs it. 
         /// </summary>
-        Task Start();
+        Task Start(CancellationToken cancellation = default);
 
         /// <summary>
         /// Start listening to the websocket stream on the background thread. 
         /// In case of connection error it throws an exception.
         /// Fail fast approach. 
         /// </summary>
-        Task StartOrFail();
+        Task StartOrFail(CancellationToken cancellation = default);
 
         /// <summary>
         /// Stop/close websocket connection with custom close code.
         /// Method doesn't throw exception, only logs it and mark client as closed. 
         /// </summary>
         /// <returns>Returns true if close was initiated successfully</returns>
-        Task<bool> Stop(WebSocketCloseStatus status, string statusDescription);
+        Task<bool> Stop(WebSocketCloseStatus status, string statusDescription, CancellationToken cancellation = default);
 
         /// <summary>
         /// Stop/close websocket connection with custom close code.
         /// Method could throw exceptions, but client is marked as closed anyway.
         /// </summary>
         /// <returns>Returns true if close was initiated successfully</returns>
-        Task<bool> StopOrFail(WebSocketCloseStatus status, string statusDescription);
+        Task<bool> StopOrFail(WebSocketCloseStatus status, string statusDescription, CancellationToken cancellation = default);
 
         /// <summary>
         /// Send message to the websocket channel. 
@@ -149,7 +150,8 @@ namespace Websocket.Client
         /// on the full .NET Framework platform
         /// </summary>
         /// <param name="message">Message to be sent</param>
-        Task SendInstant(string message);
+        /// <param name="cancellation">Cancellation token</param>
+        Task SendInstant(string message, CancellationToken cancellation = default);
 
         /// <summary>
         /// Send binary message to the websocket channel. 
@@ -158,7 +160,8 @@ namespace Websocket.Client
         /// on the full .NET Framework platform
         /// </summary>
         /// <param name="message">Message to be sent</param>
-        Task SendInstant(byte[] message);
+        /// <param name="cancellation">Cancellation token</param>
+        Task SendInstant(byte[] message, CancellationToken cancellation = default);
 
         /// <summary>
         /// Send already converted text message to the websocket channel. 
@@ -183,14 +186,14 @@ namespace Websocket.Client
         /// Closes current websocket stream and perform a new connection to the server.
         /// In case of connection error it doesn't throw an exception, but tries to reconnect indefinitely. 
         /// </summary>
-        Task Reconnect();
+        Task Reconnect(CancellationToken cancellation = default);
 
         /// <summary>
         /// Force reconnection. 
         /// Closes current websocket stream and perform a new connection to the server.
         /// In case of connection error it throws an exception and doesn't perform any other reconnection try. 
         /// </summary>
-        Task ReconnectOrFail();
+        Task ReconnectOrFail(CancellationToken cancellation = default);
 
         /// <summary>
         /// Stream/publish fake message (via 'MessageReceived' observable).

@@ -13,9 +13,9 @@ namespace Websocket.Client
         /// Closes current websocket stream and perform a new connection to the server.
         /// In case of connection error it doesn't throw an exception, but tries to reconnect indefinitely. 
         /// </summary>
-        public Task Reconnect()
+        public Task Reconnect(CancellationToken cancellation = default)
         {
-            return ReconnectInternal(false);
+            return ReconnectInternal(false, cancellation);
         }
 
         /// <summary>
@@ -23,12 +23,12 @@ namespace Websocket.Client
         /// Closes current websocket stream and perform a new connection to the server.
         /// In case of connection error it throws an exception and doesn't perform any other reconnection try. 
         /// </summary>
-        public Task ReconnectOrFail()
+        public Task ReconnectOrFail(CancellationToken cancellation = default)
         {
-            return ReconnectInternal(true);
+            return ReconnectInternal(true, cancellation);
         }
 
-        private async Task ReconnectInternal(bool failFast)
+        private async Task ReconnectInternal(bool failFast, CancellationToken cancellation)
         {
             if (!IsStarted)
             {
@@ -38,7 +38,7 @@ namespace Websocket.Client
 
             try
             {
-                await ReconnectSynchronized(ReconnectionType.ByUser, failFast, null).ConfigureAwait(false);
+                await ReconnectSynchronized(ReconnectionType.ByUser, failFast, null, cancellation).ConfigureAwait(false);
             }
             finally
             {
@@ -46,15 +46,15 @@ namespace Websocket.Client
             }
         }
 
-        private async Task ReconnectSynchronized(ReconnectionType type, bool failFast, Exception? causedException)
+        private async Task ReconnectSynchronized(ReconnectionType type, bool failFast, Exception? causedException, CancellationToken cancellation)
         {
-            using (await _locker.LockAsync())
+            using (await _locker.LockAsync(cancellation))
             {
-                await Reconnect(type, failFast, causedException);
+                await Reconnect(type, failFast, causedException, cancellation);
             }
         }
 
-        private async Task Reconnect(ReconnectionType type, bool failFast, Exception? causedException)
+        private async Task Reconnect(ReconnectionType type, bool failFast, Exception? causedException, CancellationToken cancellation)
         {
             IsRunning = false;
             if (_disposing || !IsStarted)
@@ -97,7 +97,7 @@ namespace Websocket.Client
             }
 
             _logger.LogDebug(L("Reconnecting..."), Name);
-            _cancellation = new CancellationTokenSource();
+            _cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
             await StartClient(_url, _cancellation.Token, type, failFast).ConfigureAwait(false);
             _reconnecting = false;
         }
@@ -130,7 +130,7 @@ namespace Websocket.Client
                 _logger.LogDebug(L("Last message received more than {timeoutMs} ms ago. Hard restart.."), Name, timeoutMs.ToString("F"));
 
                 DeactivateLastChance();
-                _ = ReconnectSynchronized(ReconnectionType.NoMessageReceived, false, null);
+                _ = ReconnectSynchronized(ReconnectionType.NoMessageReceived, false, null, _cancellation?.Token ?? CancellationToken.None);
             }
         }
     }

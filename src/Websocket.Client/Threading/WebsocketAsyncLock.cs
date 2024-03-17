@@ -43,9 +43,9 @@ namespace Websocket.Client.Threading
         /// <summary>
         /// Use inside 'using' block with await
         /// </summary>
-        public Task<IDisposable> LockAsync()
+        public Task<IDisposable> LockAsync(CancellationToken cancellation = default)
         {
-            var waitTask = _semaphore.WaitAsync();
+            var waitTask = _semaphore.WaitAsync(cancellation);
             return waitTask.IsCompleted
                 ? _releaserTask
                 : waitTask.ContinueWith(

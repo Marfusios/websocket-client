@@ -317,10 +317,11 @@ namespace Websocket.Client
             IsStarted = true;
 
             _logger.LogDebug(L("Starting.."), Name);
-            _cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+            _cancellation = new CancellationTokenSource();
             _cancellationTotal = new CancellationTokenSource();
 
-            await StartClient(_url, _cancellation.Token, ReconnectionType.Initial, failFast).ConfigureAwait(false);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(_cancellation.Token, cancellation);
+            await StartClient(_url, cts.Token, ReconnectionType.Initial, failFast).ConfigureAwait(false);
 
             StartBackgroundThreadForSendingText();
             StartBackgroundThreadForSendingBinary();
@@ -393,7 +394,7 @@ namespace Websocket.Client
             try
             {
                 _client = await _connectionFactory(uri, token).ConfigureAwait(false);
-                _ = Listen(_client, token);
+                _ = Listen(_client, _cancellation?.Token ?? CancellationToken.None);
                 IsRunning = true;
                 IsStarted = true;
                 _reconnectionSubject.OnNext(ReconnectionInfo.Create(type));

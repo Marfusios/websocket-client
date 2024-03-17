@@ -97,8 +97,10 @@ namespace Websocket.Client
             }
 
             _logger.LogDebug(L("Reconnecting..."), Name);
-            _cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
-            await StartClient(_url, _cancellation.Token, type, failFast).ConfigureAwait(false);
+            _cancellation = new CancellationTokenSource();
+            
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(_cancellation.Token, cancellation);
+            await StartClient(_url, cts.Token, type, failFast).ConfigureAwait(false);
             _reconnecting = false;
         }
 

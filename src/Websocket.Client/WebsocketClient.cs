@@ -458,7 +458,7 @@ namespace Websocket.Client
                 do
                 {
                     ValueWebSocketReceiveResult result;
-                    var ms = (RecyclableMemoryStream)_memoryStreamManager.GetStream();
+                    var ms = _memoryStreamManager.GetStream();
 
                     while (true)
                     {

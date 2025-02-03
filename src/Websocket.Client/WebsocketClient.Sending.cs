@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Buffers;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -15,12 +16,13 @@ namespace Websocket.Client
             SingleReader = true,
             SingleWriter = false
         });
-        private readonly Channel<ArraySegment<byte>> _messagesBinaryToSendQueue = Channel.CreateUnbounded<ArraySegment<byte>>(new UnboundedChannelOptions()
+        private readonly Channel<ReadOnlySequence<byte>> _messagesBinaryToSendQueue = Channel.CreateUnbounded<ReadOnlySequence<byte>>(new UnboundedChannelOptions()
         {
             SingleReader = true,
             SingleWriter = false
         });
 
+        private static readonly byte[] EMPTY_ARRAY = { };
 
         /// <summary>
         /// Send text message to the websocket channel. 
@@ -45,7 +47,7 @@ namespace Websocket.Client
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
-            return _messagesBinaryToSendQueue.Writer.TryWrite(new ArraySegment<byte>(message));
+            return _messagesBinaryToSendQueue.Writer.TryWrite(new ReadOnlySequence<byte>(message));
         }
 
         /// <summary>
@@ -55,6 +57,19 @@ namespace Websocket.Client
         /// <param name="message">Binary message to be sent</param>
         /// <returns>true if the message was written to the queue</returns>
         public bool Send(ArraySegment<byte> message)
+        {
+            Validations.Validations.ValidateInput(message, nameof(message));
+
+            return _messagesBinaryToSendQueue.Writer.TryWrite(new ReadOnlySequence<byte>(message));
+        }
+
+        /// <summary>
+        /// Send binary message to the websocket channel. 
+        /// It inserts the message to the queue and actual sending is done on another thread
+        /// </summary>
+        /// <param name="message">Binary message to be sent</param>
+        /// <returns>true if the message was written to the queue</returns>
+        public bool Send(ReadOnlySequence<byte> message)
         {
             Validations.Validations.ValidateInput(message, nameof(message));
 
@@ -84,7 +99,7 @@ namespace Websocket.Client
         /// <param name="message">Message to be sent</param>
         public Task SendInstant(byte[] message)
         {
-            return SendInternalSynchronized(new ArraySegment<byte>(message));
+            return SendInternalSynchronized(message);
         }
 
         /// <summary>
@@ -113,6 +128,20 @@ namespace Websocket.Client
             Validations.Validations.ValidateInput(message, nameof(message));
 
             return _messagesTextToSendQueue.Writer.TryWrite(new RequestBinarySegmentMessage(message));
+        }
+
+        /// <summary>
+        /// Send already converted text message to the websocket channel. 
+        /// Use this method to avoid double serialization of the text message.
+        /// It inserts the message to the queue and actual sending is done on another thread
+        /// </summary>
+        /// <param name="message">Message to be sent</param>
+        /// <returns>true if the message was written to the queue</returns>
+        public bool SendAsText(ReadOnlySequence<byte> message)
+        {
+            Validations.Validations.ValidateInput(message, nameof(message));
+
+            return _messagesTextToSendQueue.Writer.TryWrite(new RequestBinarySequenceMessage(message));
         }
 
         /// <summary>
@@ -230,57 +259,109 @@ namespace Websocket.Client
 
         private async Task SendInternal(RequestMessage message)
         {
-            if (!IsClientConnected())
-            {
-                _logger.LogDebug(L("Client is not connected to server, cannot send: {message}"), Name, message);
-                return;
-            }
-
-            _logger.LogTrace(L("Sending: {message}"), Name, message);
-
-            ReadOnlyMemory<byte> payload;
-
             switch (message)
             {
                 case RequestTextMessage textMessage:
-                    payload = MemoryMarshal.AsMemory<byte>(GetEncoding().GetBytes(textMessage.Text));
+                    await SendTextMessage(textMessage).ConfigureAwait(false);
                     break;
                 case RequestBinaryMessage binaryMessage:
-                    payload = MemoryMarshal.AsMemory<byte>(binaryMessage.Data);
+                    await SendBinaryMessage(binaryMessage).ConfigureAwait(false);
                     break;
                 case RequestBinarySegmentMessage segmentMessage:
-                    payload = segmentMessage.Data.AsMemory();
+                    await SendBinarySegmentMessage(segmentMessage).ConfigureAwait(false);
+                    break;
+                case RequestBinarySequenceMessage sequenceMessage:
+                    await SendBinarySequenceMessage(sequenceMessage).ConfigureAwait(false);
                     break;
                 default:
                     throw new ArgumentException($"Unknown message type: {message.GetType()}");
             }
-
-            await _client!
-                .SendAsync(payload, WebSocketMessageType.Text, true, _cancellation?.Token ?? CancellationToken.None)
-                .ConfigureAwait(false);
+        }
+        
+        private async Task SendTextMessage(RequestTextMessage textMessage)
+        {
+            var payload = MemoryMarshal.AsMemory<byte>(GetEncoding().GetBytes(textMessage.Text));
+            await SendInternal(payload, WebSocketMessageType.Text).ConfigureAwait(false);
         }
 
-        private async Task SendInternalSynchronized(ArraySegment<byte> message)
+        private async Task SendBinaryMessage(RequestBinaryMessage binaryMessage)
+        {
+            var payload = MemoryMarshal.AsMemory<byte>(binaryMessage.Data);
+            await SendInternal(payload, WebSocketMessageType.Text).ConfigureAwait(false);
+        }
+
+        private async Task SendBinarySegmentMessage(RequestBinarySegmentMessage segmentMessage)
+        {
+            await SendInternal(segmentMessage.Data, WebSocketMessageType.Text).ConfigureAwait(false);
+        }
+
+        private async Task SendBinarySequenceMessage(RequestBinarySequenceMessage sequenceMessage)
+        {
+            await SendInternal(sequenceMessage.Data, WebSocketMessageType.Text).ConfigureAwait(false);
+        }
+
+        private async Task SendInternalSynchronized(ReadOnlySequence<byte> message)
         {
             using (await _locker.LockAsync())
             {
-                await SendInternal(message);
+                await SendInternal(message, WebSocketMessageType.Binary);
+            }
+        }
+        private async Task SendInternalSynchronized(ReadOnlyMemory<byte> message)
+        {
+            using (await _locker.LockAsync())
+            {
+                await SendInternal(message, WebSocketMessageType.Binary);
             }
         }
 
-        private async Task SendInternal(ArraySegment<byte> payload)
+        private async Task SendInternal(ReadOnlySequence<byte> payload, WebSocketMessageType messageType)
         {
-            if (!IsClientConnected())
+            if (payload.IsSingleSegment)
             {
-                _logger.LogDebug(L("Client is not connected to server, cannot send binary, length: {length}"), Name, payload.Count);
+                await SendInternal(payload.First, messageType).ConfigureAwait(false);
                 return;
             }
 
-            _logger.LogTrace(L("Sending binary, length: {length}"), Name, payload.Count);
+            if (!BeforeSendInternal(payload.Length))
+            {
+                return;
+            }
+
+            foreach (var memory in payload)
+            {
+                await _client!
+                    .SendAsync(memory, messageType, false, _cancellation?.Token ?? CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
 
             await _client!
-                .SendAsync(payload, WebSocketMessageType.Binary, true, _cancellation?.Token ?? CancellationToken.None)
+                .SendAsync(EMPTY_ARRAY, messageType, true, _cancellation?.Token ?? CancellationToken.None)
                 .ConfigureAwait(false);
+        }
+
+        private async Task SendInternal(ReadOnlyMemory<byte> payload, WebSocketMessageType messageType)
+        {
+            if (!BeforeSendInternal(payload.Length))
+            {
+                return;
+            }
+
+            await _client!
+                .SendAsync(payload, messageType, true, _cancellation?.Token ?? CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+
+        private bool BeforeSendInternal(long length)
+        {
+            if (!IsClientConnected())
+            {
+                _logger.LogDebug(L("Client is not connected to server, cannot send binary, length: {length}"), Name, length);
+                return false;
+            }
+
+            _logger.LogTrace(L("Sending binary, length: {length}"), Name, length);
+            return true;
         }
     }
 }

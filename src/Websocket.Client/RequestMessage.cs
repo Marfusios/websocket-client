@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 
 namespace Websocket.Client
 {
@@ -29,6 +30,16 @@ namespace Websocket.Client
         public ArraySegment<byte> Data { get; }
 
         public RequestBinarySegmentMessage(ArraySegment<byte> data)
+        {
+            Data = data;
+        }
+    }
+
+    internal class RequestBinarySequenceMessage : RequestMessage
+    {
+        public ReadOnlySequence<byte> Data { get; }
+
+        public RequestBinarySequenceMessage(ReadOnlySequence<byte> data)
         {
             Data = data;
         }

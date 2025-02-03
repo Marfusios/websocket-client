@@ -22,8 +22,12 @@ namespace Websocket.Client
         private readonly ILogger<WebsocketClient> _logger;
         private readonly WebsocketAsyncLock _locker = new WebsocketAsyncLock();
         private readonly Func<Uri, CancellationToken, Task<WebSocket>> _connectionFactory;
-        private static readonly RecyclableMemoryStreamManager _memoryStreamManager = new RecyclableMemoryStreamManager();
+        private readonly RecyclableMemoryStreamManager? _memoryStreamManager;
+        private static readonly Lazy<RecyclableMemoryStreamManager> _globalMemoryStreamManager = new Lazy<RecyclableMemoryStreamManager>(new RecyclableMemoryStreamManager());
 
+        private RecyclableMemoryStreamManager MemoryStreamManager =>
+            _memoryStreamManager ?? _globalMemoryStreamManager.Value;
+        
         private Uri _url;
         private Timer? _lastChanceTimer;
         private DateTime _lastReceivedMsg = DateTime.UtcNow;
@@ -47,8 +51,9 @@ namespace Websocket.Client
         /// </summary>
         /// <param name="url">Target websocket url (wss://)</param>
         /// <param name="clientFactory">Optional factory for native ClientWebSocket, use it whenever you need some custom features (proxy, settings, etc)</param>
-        public WebsocketClient(Uri url, Func<ClientWebSocket>? clientFactory = null)
-            : this(url, null, GetClientFactory(clientFactory))
+        /// <param name="memoryStreamManager">Optional memory stream manager that can be reused on multiple occasions</param>
+        public WebsocketClient(Uri url, Func<ClientWebSocket>? clientFactory = null, RecyclableMemoryStreamManager? memoryStreamManager = null)
+            : this(url, null, GetClientFactory(clientFactory), memoryStreamManager)
         {
         }
 
@@ -58,8 +63,9 @@ namespace Websocket.Client
         /// <param name="url">Target websocket url (wss://)</param>
         /// <param name="logger">Logger instance, can be null</param>
         /// <param name="clientFactory">Optional factory for native ClientWebSocket, use it whenever you need some custom features (proxy, settings, etc)</param>
-        public WebsocketClient(Uri url, ILogger<WebsocketClient>? logger, Func<ClientWebSocket>? clientFactory = null)
-            : this(url, logger, GetClientFactory(clientFactory))
+        /// <param name="memoryStreamManager">Optional memory stream manager that can be reused on multiple occasions</param>
+        public WebsocketClient(Uri url, ILogger<WebsocketClient>? logger, Func<ClientWebSocket>? clientFactory = null, RecyclableMemoryStreamManager? memoryStreamManager = null)
+            : this(url, logger, GetClientFactory(clientFactory), memoryStreamManager)
         {
         }
 
@@ -69,7 +75,8 @@ namespace Websocket.Client
         /// <param name="url">Target websocket url (wss://)</param>
         /// <param name="logger">Logger instance, can be null</param>
         /// <param name="connectionFactory">Optional factory for native creating and connecting to a websocket. The method should return a <see cref="WebSocket"/> which is connected. Use it whenever you need some custom features (proxy, settings, etc)</param>
-        public WebsocketClient(Uri url, ILogger<WebsocketClient>? logger, Func<Uri, CancellationToken, Task<WebSocket>>? connectionFactory)
+        /// <param name="memoryStreamManager">Optional memory stream manager that can be reused on multiple occasions</param>
+        public WebsocketClient(Uri url, ILogger<WebsocketClient>? logger, Func<Uri, CancellationToken, Task<WebSocket>>? connectionFactory, RecyclableMemoryStreamManager? memoryStreamManager = null)
         {
             Validations.Validations.ValidateInput(url, nameof(url));
 
@@ -85,6 +92,7 @@ namespace Websocket.Client
                 await client.ConnectAsync(uri, token).ConfigureAwait(false);
                 return client;
             });
+            _memoryStreamManager = memoryStreamManager;
         }
 
         /// <inheritdoc />
@@ -458,7 +466,7 @@ namespace Websocket.Client
                 do
                 {
                     ValueWebSocketReceiveResult result;
-                    var ms = (RecyclableMemoryStream)_memoryStreamManager.GetStream();
+                    var ms = MemoryStreamManager.GetStream();
 
                     while (true)
                     {

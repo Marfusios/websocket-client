@@ -22,7 +22,7 @@ namespace Websocket.Client
             SingleWriter = false
         });
 
-        private static readonly byte[] EMPTY_ARRAY = { };
+        private static readonly byte[] _emptyArray = { };
 
         /// <summary>
         /// Send text message to the websocket channel. 
@@ -277,7 +277,7 @@ namespace Websocket.Client
                     throw new ArgumentException($"Unknown message type: {message.GetType()}");
             }
         }
-        
+
         private async Task SendTextMessage(RequestTextMessage textMessage)
         {
             var payload = MemoryMarshal.AsMemory<byte>(GetEncoding().GetBytes(textMessage.Text));
@@ -323,7 +323,7 @@ namespace Websocket.Client
                 return;
             }
 
-            if (!BeforeSendInternal(payload.Length))
+            if (!CheckClientConnection(payload.Length))
             {
                 return;
             }
@@ -336,13 +336,13 @@ namespace Websocket.Client
             }
 
             await _client!
-                .SendAsync(EMPTY_ARRAY, messageType, true, _cancellation?.Token ?? CancellationToken.None)
+                .SendAsync(_emptyArray, messageType, true, _cancellation?.Token ?? CancellationToken.None)
                 .ConfigureAwait(false);
         }
 
         private async Task SendInternal(ReadOnlyMemory<byte> payload, WebSocketMessageType messageType)
         {
-            if (!BeforeSendInternal(payload.Length))
+            if (!CheckClientConnection(payload.Length))
             {
                 return;
             }
@@ -352,7 +352,7 @@ namespace Websocket.Client
                 .ConfigureAwait(false);
         }
 
-        private bool BeforeSendInternal(long length)
+        private bool CheckClientConnection(long length)
         {
             if (!IsClientConnected())
             {

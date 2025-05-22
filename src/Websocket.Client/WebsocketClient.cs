@@ -27,7 +27,7 @@ namespace Websocket.Client
 
         private RecyclableMemoryStreamManager MemoryStreamManager =>
             _memoryStreamManager ?? _globalMemoryStreamManager.Value;
-        
+
         private Uri _url;
         private Timer? _lastChanceTimer;
         private DateTime _lastReceivedMsg = DateTime.UtcNow;
@@ -95,7 +95,9 @@ namespace Websocket.Client
             _memoryStreamManager = memoryStreamManager;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Remote server address. Reconnect after the change.
+        /// </summary>
         public Uri Url
         {
             get => _url;

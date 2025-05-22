@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Threading;
@@ -72,7 +73,57 @@ namespace Websocket.Client.Tests
                 });
 
             await client.Start();
-            client.Send(new byte[] { 10, 14, 15, 16 });
+            client.Send([10, 14, 15, 16]);
+
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+
+            Assert.NotNull(received);
+            Assert.Equal(4, received.Length);
+            Assert.Equal(14, received[1]);
+        }
+
+        [Fact]
+        public async Task SendArraySegmentMessage_ShouldWork()
+        {
+            using var client = _context.CreateClient();
+            byte[] received = null;
+            var receivedEvent = new ManualResetEvent(false);
+
+            client.MessageReceived
+                .Where(x => x.MessageType == WebSocketMessageType.Binary)
+                .Subscribe(msg =>
+                {
+                    received = msg.Binary;
+                    receivedEvent.Set();
+                });
+
+            await client.Start();
+            client.Send(new ArraySegment<byte>([10, 14, 15, 16]));
+
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+
+            Assert.NotNull(received);
+            Assert.Equal(4, received.Length);
+            Assert.Equal(14, received[1]);
+        }
+
+        [Fact]
+        public async Task SendSequenceMessage_ShouldWork()
+        {
+            using var client = _context.CreateClient();
+            byte[] received = null;
+            var receivedEvent = new ManualResetEvent(false);
+
+            client.MessageReceived
+                .Where(x => x.MessageType == WebSocketMessageType.Binary)
+                .Subscribe(msg =>
+                {
+                    received = msg.Binary;
+                    receivedEvent.Set();
+                });
+
+            await client.Start();
+            client.Send(new ReadOnlySequence<byte>([10, 14, 15, 16]));
 
             receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 

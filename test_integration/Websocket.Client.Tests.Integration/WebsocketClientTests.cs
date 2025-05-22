@@ -12,7 +12,7 @@ namespace Websocket.Client.Tests.Integration
 {
     public class WebsocketClientTests
     {
-        private static readonly Uri WebsocketUrl = new Uri("wss://www.bitmex.com/realtime");
+        private static readonly Uri _websocketUrl = new Uri("wss://www.bitmex.com/realtime");
         private readonly ITestOutputHelper _output;
 
         public WebsocketClientTests(ITestOutputHelper output)
@@ -24,7 +24,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task OnStarting_ShouldGetInfoResponse()
         {
-            using IWebsocketClient client = new WebsocketClient(WebsocketUrl);
+            using IWebsocketClient client = new WebsocketClient(_websocketUrl);
             string received = null;
             var receivedEvent = new ManualResetEvent(false);
 
@@ -44,7 +44,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task SendMessageBeforeStart_ShouldWorkAfterStart()
         {
-            using IWebsocketClient client = new WebsocketClient(WebsocketUrl);
+            using IWebsocketClient client = new WebsocketClient(_websocketUrl);
             string received = null;
             var receivedCount = 0;
             var receivedEvent = new ManualResetEvent(false);
@@ -82,7 +82,7 @@ namespace Websocket.Client.Tests.Integration
         {
             for (int i = 0; i < 3; i++)
             {
-                using IWebsocketClient client = new WebsocketClient(WebsocketUrl);
+                using IWebsocketClient client = new WebsocketClient(_websocketUrl);
                 await client.Start();
                 await Task.Delay(i * 20);
             }
@@ -91,7 +91,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task DisabledReconnecting_ShouldWorkAsExpected()
         {
-            using IWebsocketClient client = new WebsocketClient(WebsocketUrl);
+            using IWebsocketClient client = new WebsocketClient(_websocketUrl);
             var receivedCount = 0;
             var receivedEvent = new ManualResetEvent(false);
 
@@ -122,7 +122,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task DisabledReconnecting_ShouldWorkAtRuntime()
         {
-            using IWebsocketClient client = new WebsocketClient(WebsocketUrl);
+            using IWebsocketClient client = new WebsocketClient(_websocketUrl);
             var receivedCount = 0;
 
             client.IsReconnectionEnabled = true;
@@ -144,7 +144,7 @@ namespace Websocket.Client.Tests.Integration
         [Fact]
         public async Task OnClose_ShouldWorkCorrectly()
         {
-            using IWebsocketClient client = new WebsocketClient(WebsocketUrl);
+            using IWebsocketClient client = new WebsocketClient(_websocketUrl);
             client.ReconnectTimeout = TimeSpan.FromSeconds(5);
 
             string received = null;

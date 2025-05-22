@@ -484,7 +484,7 @@ namespace Websocket.Client
 
                     if (result.MessageType == WebSocketMessageType.Text && IsTextMessageConversionEnabled)
                     {
-                        var data = GetEncoding().GetString(ms.ToArray());
+                        var data = GetEncoding().GetString(ms.GetBuffer(), 0, (int)ms.Length);
                         message = ResponseMessage.TextMessage(data);
                     }
                     else if (result.MessageType == WebSocketMessageType.Close)

@@ -159,6 +159,21 @@ namespace Websocket.Client
         bool IsRunning { get; }
 
         /// <summary>
+        /// Returns whether text message sender is running.
+        /// </summary>
+        bool TextSenderRunning { get; }
+
+        /// <summary>
+        /// Returns whether the binary message sender is running.
+        /// </summary>
+        bool BinarySenderRunning { get; }
+
+        /// <summary>
+        /// Indicates whether any thread has entered the lock.
+        /// </summary>
+        bool IsInsideLock { get; }
+
+        /// <summary>
         /// Enable or disable text message conversion from binary to string (via 'MessageEncoding' property).
         /// Default: true
         /// </summary>

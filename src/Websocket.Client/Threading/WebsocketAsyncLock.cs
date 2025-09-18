@@ -32,6 +32,11 @@ namespace Websocket.Client.Threading
         }
 
         /// <summary>
+        /// True if the lock is currently taken
+        /// </summary>
+        public bool IsLocked => _semaphore.CurrentCount == 0;
+
+        /// <summary>
         /// Use inside 'using' block
         /// </summary>
         public IDisposable Lock()

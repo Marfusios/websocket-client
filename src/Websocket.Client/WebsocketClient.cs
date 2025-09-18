@@ -189,6 +189,9 @@ namespace Websocket.Client
         /// Default: true
         /// </summary>
         public bool IsTextMessageConversionEnabled { get; set; } = true;
+        
+        /// <inheritdoc />
+        public bool IsInsideLock => _locker.IsLocked;
 
         /// <summary>
         /// Enable or disable automatic <see cref="MemoryStream.Dispose(bool)"/> of the <see cref="MemoryStream"/> 
@@ -491,7 +494,7 @@ namespace Websocket.Client
                     }
                     else if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        _logger.LogTrace(L("Received close message"), Name);
+                        _logger.LogDebug(L("Received close message"), Name);
 
                         if (!IsStarted || _stopping)
                         {

@@ -515,13 +515,12 @@ namespace Websocket.Client
                             continue;
                         }
 
-                        await StopInternal(client, WebSocketCloseStatus.NormalClosure, "Closing",
-                            token, false, true);
+                        await StopInternal(client, WebSocketCloseStatus.NormalClosure, "Closing", token, false, true);
 
                         // reconnect if enabled
                         if (IsReconnectionEnabled && !ShouldIgnoreReconnection(client))
                         {
-                            _ = ReconnectSynchronized(ReconnectionType.Lost, false, null);
+                            _ = ReconnectSynchronized(ReconnectionType.ByServer, false, null);
                         }
 
                         return;

@@ -139,6 +139,7 @@ namespace Websocket.Client.Tests
 
             foreach (var client in clients)
             {
+                await client.Start();
                 client.Send("ping");
             }
 
@@ -243,7 +244,7 @@ namespace Websocket.Client.Tests
             await WaitUntil(() => !client.IsStarted);
 
             Assert.Equal(1, receivedCount);
-            Assert.InRange(disconnectionCount, 1, 2);
+            Assert.Equal(1, disconnectionCount);
             Assert.Equal(DisconnectionType.ByServer, disconnectionInfo.Type);
             Assert.Equal(WebSocketCloseStatus.NormalClosure, disconnectionInfo.CloseStatus);
             Assert.Equal("normal closure", disconnectionInfo.CloseStatusDescription);
@@ -289,8 +290,8 @@ namespace Websocket.Client.Tests
             await WaitUntil(() => receivedCount == 2);
 
             Assert.Equal(2, receivedCount);
-            Assert.InRange(disconnectionCount, 1, 2);
-            Assert.Equal(DisconnectionType.Lost, disconnectionInfo.Type);
+            Assert.Equal(1, disconnectionCount);
+            Assert.Equal(DisconnectionType.ByServer, disconnectionInfo.Type);
             Assert.Equal(WebSocketCloseStatus.NormalClosure, disconnectionInfo.CloseStatus);
             Assert.Equal("normal closure", disconnectionInfo.CloseStatusDescription);
             Assert.True(client.IsRunning);
@@ -336,8 +337,8 @@ namespace Websocket.Client.Tests
             await WaitUntil(() => !client.IsStarted);
 
             Assert.Equal(1, receivedCount);
-            Assert.InRange(disconnectionCount, 1, 2);
-            Assert.Equal(DisconnectionType.Lost, disconnectionInfo.Type);
+            Assert.Equal(1, disconnectionCount);
+            Assert.Equal(DisconnectionType.ByServer, disconnectionInfo.Type);
             Assert.Equal(WebSocketCloseStatus.NormalClosure, disconnectionInfo.CloseStatus);
             Assert.Equal("normal closure", disconnectionInfo.CloseStatusDescription);
             Assert.False(client.IsRunning);
@@ -383,8 +384,8 @@ namespace Websocket.Client.Tests
             await WaitUntil(() => receivedCount == 2);
 
             Assert.Equal(2, receivedCount);
-            Assert.InRange(disconnectionCount, 1, 2);
-            Assert.Equal(DisconnectionType.Lost, disconnectionInfo.Type);
+            Assert.Equal(1, disconnectionCount);
+            Assert.Equal(DisconnectionType.ByServer, disconnectionInfo.Type);
             Assert.Equal(WebSocketCloseStatus.NormalClosure, disconnectionInfo.CloseStatus);
             Assert.Equal("normal closure", disconnectionInfo.CloseStatusDescription);
             Assert.True(client.IsRunning);

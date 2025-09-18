@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Threading;
@@ -36,7 +37,7 @@ namespace Websocket.Client.Tests.Integration
 
             await client.Start();
 
-            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
 
             Assert.NotNull(received);
         }
@@ -72,7 +73,7 @@ namespace Websocket.Client.Tests.Integration
             client.Send("ping");
             client.Send("ping");
 
-            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
 
             Assert.NotNull(received);
         }
@@ -106,15 +107,15 @@ namespace Websocket.Client.Tests.Integration
             });
 
             await client.Start();
-            await Task.Delay(5000);
+            await Task.Delay(500);
             await client.Stop(WebSocketCloseStatus.Empty, string.Empty);
 
-            await Task.Delay(5000);
+            await Task.Delay(500);
 
             await client.Start();
-            await Task.Delay(1000);
+            await Task.Delay(100);
 
-            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
 
             Assert.Equal(2, receivedCount);
         }
@@ -126,7 +127,7 @@ namespace Websocket.Client.Tests.Integration
             var receivedCount = 0;
 
             client.IsReconnectionEnabled = true;
-            client.ReconnectTimeout = TimeSpan.FromSeconds(5);
+            client.ReconnectTimeout = TimeSpan.FromMilliseconds(500);
 
             client.MessageReceived.Subscribe(msg =>
             {
@@ -136,7 +137,7 @@ namespace Websocket.Client.Tests.Integration
             });
 
             await client.Start();
-            await Task.Delay(17000);
+            await Task.Delay(3000);
 
             Assert.Equal(2, receivedCount);
         }
@@ -145,7 +146,7 @@ namespace Websocket.Client.Tests.Integration
         public async Task OnClose_ShouldWorkCorrectly()
         {
             using IWebsocketClient client = new WebsocketClient(_websocketUrl);
-            client.ReconnectTimeout = TimeSpan.FromSeconds(5);
+            client.ReconnectTimeout = TimeSpan.FromMilliseconds(500);
 
             string received = null;
             var receivedCount = 0;
@@ -169,13 +170,13 @@ namespace Websocket.Client.Tests.Integration
 
             _ = Task.Run(async () =>
             {
-                await Task.Delay(2000);
+                await Task.Delay(200);
                 var success = await client.Stop(WebSocketCloseStatus.InternalServerError, "server error 500");
                 Assert.True(success);
                 receivedEvent.Set();
             });
 
-            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
 
             Assert.NotNull(received);
             Assert.Equal(1, receivedCount);
@@ -191,7 +192,7 @@ namespace Websocket.Client.Tests.Integration
             Assert.Equal("server error 500", nativeClient.CloseStatusDescription);
 
             // check that reconnection is disabled
-            await Task.Delay(7000);
+            await Task.Delay(2000);
             Assert.Equal(1, receivedCount);
         }
 

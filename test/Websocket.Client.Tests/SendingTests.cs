@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Threading;
@@ -158,17 +159,17 @@ namespace Websocket.Client.Tests
             client.Send("ping");
             client.Send("ping");
 
-            await Task.Delay(1000);
-            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            await Task.Delay(100);
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
 
             client.Dispose();
 
-            await Task.Delay(2000);
+            await Task.Delay(200);
 
             client.Send("ping");
             await client.SendInstant("ping");
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
 
             Assert.NotNull(received);
             Assert.Equal(3, receivedCount);

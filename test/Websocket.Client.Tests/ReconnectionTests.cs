@@ -29,7 +29,7 @@ namespace Websocket.Client.Tests
             var receivedEvent = new ManualResetEvent(false);
 
             client.IsReconnectionEnabled = true;
-            client.ReconnectTimeout = TimeSpan.FromSeconds(3);
+            client.ReconnectTimeout = TimeSpan.FromMilliseconds(50);
 
             client.MessageReceived
                 .Where(x => x.MessageType == WebSocketMessageType.Text)
@@ -40,7 +40,7 @@ namespace Websocket.Client.Tests
                 });
 
             await client.Start();
-            await Task.Delay(12000);
+            await Task.Delay(2200);
 
             _output.WriteLine($"Reconnected {receivedCount} times");
             Assert.InRange(receivedCount, 2, 7);
@@ -67,13 +67,13 @@ namespace Websocket.Client.Tests
                 });
 
             await client.Start();
-            await Task.Delay(3000);
+            await Task.Delay(300);
             await client.Stop(WebSocketCloseStatus.InternalServerError, "something strange happened");
 
-            await Task.Delay(3000);
+            await Task.Delay(300);
 
             await client.Start();
-            await Task.Delay(1000);
+            await Task.Delay(100);
 
             receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
@@ -101,10 +101,10 @@ namespace Websocket.Client.Tests
                 });
 
             await client.Start();
-            await Task.Delay(3000);
+            await Task.Delay(300);
             await client.Reconnect();
 
-            await Task.Delay(3000);
+            await Task.Delay(300);
 
             receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
 
@@ -118,7 +118,7 @@ namespace Websocket.Client.Tests
             var receivedCount = 0;
 
             client.IsReconnectionEnabled = true;
-            client.ReconnectTimeout = TimeSpan.FromSeconds(1);
+            client.ReconnectTimeout = TimeSpan.FromMilliseconds(200);
 
             client.MessageReceived.Subscribe(msg =>
             {
@@ -129,7 +129,7 @@ namespace Websocket.Client.Tests
             });
 
             await client.Start();
-            await Task.Delay(7000);
+            await Task.Delay(1200);
 
             Assert.Equal(2, receivedCount);
         }
@@ -162,16 +162,16 @@ namespace Websocket.Client.Tests
 
             await client.Start();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
             await client.Reconnect();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
             await client.Reconnect();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
             await client.Reconnect();
 
-            await Task.Delay(2000);
+            await Task.Delay(200);
 
             _output.WriteLine($"Received message {receivedCount} times and reconnected {receivedCount} times, " +
                               $"last: {lastReconnectionType}");
@@ -208,24 +208,24 @@ namespace Websocket.Client.Tests
 
             await client.Start();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
             await client.Reconnect();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
             await client.Reconnect();
             _ = client.Reconnect();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
             await client.Reconnect();
             await client.ReconnectOrFail();
             await client.ReconnectOrFail();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
             await client.ReconnectOrFail();
             await client.Reconnect();
             await client.ReconnectOrFail();
 
-            await Task.Delay(8000);
+            await Task.Delay(200);
 
             _output.WriteLine($"Received message {receivedCount} times and reconnected {receivedCount} times, " +
                               $"last: {lastReconnectionType}");
@@ -271,7 +271,7 @@ namespace Websocket.Client.Tests
 
             await client.Start();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
 
             client.Url = new Uri("wss://google.com");
 
@@ -286,7 +286,7 @@ namespace Websocket.Client.Tests
                 causedException = e;
             }
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
 
             Assert.Equal(2, disconnectionCount);
             Assert.Equal(DisconnectionType.Error, disconnectionInfo.Type);
@@ -338,16 +338,16 @@ namespace Websocket.Client.Tests
 
             await client.Start();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
             await client.Reconnect();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
             await client.Reconnect();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
             await client.Reconnect();
 
-            await Task.Delay(1000);
+            await Task.Delay(100);
 
             Assert.Equal(2, disconnectionCount);
             Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);

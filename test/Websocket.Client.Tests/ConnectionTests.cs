@@ -152,6 +152,35 @@ namespace Websocket.Client.Tests
         }
 
         [Fact]
+        public async Task Starting_WithServerDelay_RetriesAfterConnectionTimeout()
+        {
+            var attempt = 1;
+
+            using var client = _context.CreateClient(() => attempt++ == 1 ? 300 : 0);
+            client.ConnectTimeout = TimeSpan.FromMilliseconds(200);
+            client.ErrorReconnectTimeout = TimeSpan.FromMilliseconds(200);
+            client.ReconnectTimeout = null;
+            client.IsReconnectionEnabled = false;
+
+            var receivedCount = 0;
+            var receivedEvent = new ManualResetEvent(false);
+
+            client.MessageReceived
+                .Where(x => x.MessageType == WebSocketMessageType.Text)
+                .Subscribe(msg =>
+                {
+                    receivedCount++;
+                    receivedEvent.Set();
+                });
+
+            await client.Start();
+
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
+
+            Assert.Equal(1, receivedCount);
+        }
+
+        [Fact]
         public async Task Stopping_ShouldWorkCorrectly()
         {
             var disconnectionCount = 0;

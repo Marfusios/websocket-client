@@ -89,7 +89,7 @@ namespace Websocket.Client
             }
             _client?.Dispose();
 
-            if (!IsReconnectionEnabled || disInfo.CancelReconnection)
+            if (type != ReconnectionType.Error && (!IsReconnectionEnabled || disInfo.CancelReconnection))
             {
                 // reconnection disabled, do nothing
                 IsStarted = false;

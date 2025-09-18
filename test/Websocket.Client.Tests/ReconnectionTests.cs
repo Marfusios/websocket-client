@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Threading;
@@ -298,6 +299,38 @@ namespace Websocket.Client.Tests
             Assert.Equal(ReconnectionType.Initial, lastReconnectionType);
         }
 
+        [Fact]
+        public async Task Reconnecting_WithServerDelay_RetriesAfterConnectionTimeout()
+        {
+            var attempt = 1;
+
+            using var client = _context.CreateClient(() => attempt++ == 2 ? 300 : 0);
+            client.ConnectTimeout = TimeSpan.FromMilliseconds(200);
+            client.ErrorReconnectTimeout = TimeSpan.FromMilliseconds(200);
+            client.ReconnectTimeout = null;
+
+            var receivedCount = 0;
+            var receivedEvent = new ManualResetEvent(false);
+
+            client.MessageReceived
+                .Where(x => x.MessageType == WebSocketMessageType.Text)
+                .Subscribe(msg =>
+                {
+                    receivedCount++;
+                    receivedEvent.Set();
+                });
+
+            await client.Start();
+
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
+
+            receivedEvent.Reset();
+            await client.Reconnect();
+
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
+
+            Assert.Equal(2, receivedCount);
+        }
 
         [Fact]
         public async Task CancelingReconnection_ViaDisconnectionStream_ShouldWork()

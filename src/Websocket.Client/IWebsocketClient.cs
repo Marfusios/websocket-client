@@ -117,6 +117,12 @@ namespace Websocket.Client
         IObservable<DisconnectionInfo> DisconnectionHappened { get; }
 
         /// <summary>
+        /// Time range for how long to wait while connecting a new client.
+        /// Default: 2 seconds
+        /// </summary>
+        TimeSpan ConnectTimeout { get; set; }
+
+        /// <summary>
         /// Time range for how long to wait before reconnecting if no message comes from server.
         /// Set null to disable this feature. 
         /// Default: 1 minute

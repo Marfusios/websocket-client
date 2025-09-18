@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -27,6 +28,9 @@ namespace Websocket.Client.Tests.TestServer
                 {
                     if (context.WebSockets.IsWebSocketRequest)
                     {
+                        if (context.Request.Query.TryGetValue("delay", out var delayValues) && int.TryParse(delayValues, out var delayMilliseconds))
+                            await Task.Delay(delayMilliseconds);
+
                         var webSocket = await context.WebSockets.AcceptWebSocketAsync();
                         await SendResponse(webSocket,
                             ResponseMessage.TextMessage($"Hello, you are connected to '{nameof(SimpleStartup)}'"));

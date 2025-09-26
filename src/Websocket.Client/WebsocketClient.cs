@@ -40,6 +40,7 @@ namespace Websocket.Client
         private bool _isReconnectionEnabled = true;
         private WebSocket? _client;
         private CancellationTokenSource? _cancellation;
+        private CancellationTokenSource? _cancellationConnection;
         private CancellationTokenSource? _cancellationTotal;
 
         private readonly Subject<ResponseMessage> _messageReceivedSubject = new Subject<ResponseMessage>();
@@ -124,6 +125,12 @@ namespace Websocket.Client
         public IObservable<DisconnectionInfo> DisconnectionHappened => _disconnectedSubject.AsObservable();
 
         /// <summary>
+        /// Time range for how long to wait while connecting a new client.
+        /// Default: 2 seconds
+        /// </summary>
+        public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(2);
+
+        /// <summary>
         /// Time range for how long to wait before reconnecting if no message comes from server.
         /// Set null to disable this feature. 
         /// Default: 1 minute
@@ -189,6 +196,9 @@ namespace Websocket.Client
         /// Default: true
         /// </summary>
         public bool IsTextMessageConversionEnabled { get; set; } = true;
+        
+        /// <inheritdoc />
+        public bool IsInsideLock => _locker.IsLocked;
 
         /// <summary>
         /// Enable or disable automatic <see cref="MemoryStream.Dispose(bool)"/> of the <see cref="MemoryStream"/> 
@@ -210,19 +220,24 @@ namespace Websocket.Client
         /// </summary>
         public void Dispose()
         {
+            if (_disposing)
+                return;
+
             _disposing = true;
             _logger.LogDebug(L("Disposing.."), Name);
             try
             {
-                _messagesTextToSendQueue.Writer.Complete();
-                _messagesBinaryToSendQueue.Writer.Complete();
+                _messagesTextToSendQueue.Writer.TryComplete();
+                _messagesBinaryToSendQueue.Writer.TryComplete();
                 _lastChanceTimer?.Dispose();
                 _errorReconnectTimer?.Dispose();
                 _cancellation?.Cancel();
+                _cancellationConnection?.Cancel();
                 _cancellationTotal?.Cancel();
                 _client?.Abort();
                 _client?.Dispose();
                 _cancellation?.Dispose();
+                _cancellationConnection?.Dispose();
                 _cancellationTotal?.Dispose();
                 _messageReceivedSubject.OnCompleted();
                 _reconnectionSubject.OnCompleted();
@@ -402,7 +417,9 @@ namespace Websocket.Client
 
             try
             {
-                _client = await _connectionFactory(uri, token).ConfigureAwait(false);
+                _cancellationConnection = CancellationTokenSource.CreateLinkedTokenSource(token);
+                _cancellationConnection.CancelAfter(ConnectTimeout);
+                _client = await _connectionFactory(uri, _cancellationConnection.Token).ConfigureAwait(false);
                 _ = Listen(_client, token);
                 IsRunning = true;
                 IsStarted = true;
@@ -412,6 +429,7 @@ namespace Websocket.Client
             }
             catch (Exception e)
             {
+                IsRunning = _client?.State == WebSocketState.Open;
                 var info = DisconnectionInfo.Create(DisconnectionType.Error, _client, e);
                 _disconnectedSubject.OnNext(info);
 
@@ -447,7 +465,9 @@ namespace Websocket.Client
 
         private void ReconnectOnError(object? state)
         {
-            // await Task.Delay(timeout, token).ConfigureAwait(false);
+            if (_client != null && ShouldIgnoreReconnection(_client))
+                return;
+
             _ = Reconnect(ReconnectionType.Error, false, state as Exception).ConfigureAwait(false);
         }
 
@@ -491,7 +511,7 @@ namespace Websocket.Client
                     }
                     else if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        _logger.LogTrace(L("Received close message"), Name);
+                        _logger.LogDebug(L("Received close message"), Name);
 
                         if (!IsStarted || _stopping)
                         {
@@ -512,13 +532,12 @@ namespace Websocket.Client
                             continue;
                         }
 
-                        await StopInternal(client, WebSocketCloseStatus.NormalClosure, "Closing",
-                            token, false, true);
+                        await StopInternal(client, WebSocketCloseStatus.NormalClosure, "Closing", token, false, true);
 
                         // reconnect if enabled
                         if (IsReconnectionEnabled && !ShouldIgnoreReconnection(client))
                         {
-                            _ = ReconnectSynchronized(ReconnectionType.Lost, false, null);
+                            _ = ReconnectSynchronized(ReconnectionType.ByServer, false, null);
                         }
 
                         return;

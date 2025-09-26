@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -67,7 +68,7 @@ namespace Websocket.Client
 
             var disType = TranslateTypeToDisconnection(type);
             var disInfo = DisconnectionInfo.Create(disType, _client, causedException);
-            if (type != ReconnectionType.Error)
+            if (type != ReconnectionType.Error && _client?.State != WebSocketState.CloseReceived && _client?.State != WebSocketState.Closed)
             {
                 _disconnectedSubject.OnNext(disInfo);
                 if (disInfo.CancelReconnection)
@@ -88,7 +89,7 @@ namespace Websocket.Client
             }
             _client?.Dispose();
 
-            if (!IsReconnectionEnabled || disInfo.CancelReconnection)
+            if (type != ReconnectionType.Error && (!IsReconnectionEnabled || disInfo.CancelReconnection))
             {
                 // reconnection disabled, do nothing
                 IsStarted = false;

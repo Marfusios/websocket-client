@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
 using System.Threading;
@@ -22,6 +23,20 @@ namespace Websocket.Client.Tests
             _context = new TestContext<SimpleStartup>(_output);
         }
 
+        private static Task WaitUntil(Func<bool> func)
+        {
+            return WaitFor(func).WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
+
+            static async Task WaitFor(Func<bool> func)
+            {
+                var stop = func();
+                while (!stop)
+                {
+                    await Task.Delay(200);
+                    stop = func();
+                }
+            }
+        }
 
         [Fact]
         public async Task StartOrFail_ValidServer_ShouldWorkAsExpected()
@@ -55,7 +70,7 @@ namespace Websocket.Client.Tests
             client.Send("ping");
             client.Send("ping");
 
-            await Task.Delay(2000);
+            await Task.Delay(200);
 
             Assert.Equal(0, disconnectionCount);
             Assert.Equal(DisconnectionType.Exit, disconnectionType);
@@ -100,8 +115,6 @@ namespace Websocket.Client.Tests
                 causedException = e;
             }
 
-            await Task.Delay(2000);
-
             Assert.Equal(1, disconnectionCount);
             Assert.Equal(DisconnectionType.Error, disconnectionInfo.Type);
             Assert.NotNull(disconnectionInfo.Exception);
@@ -110,8 +123,6 @@ namespace Websocket.Client.Tests
             Assert.Equal(0, receivedCount);
             Assert.Null(received);
         }
-
-
 
         [Fact]
         public async Task Starting_MultipleTimes_ShouldWorkWithNoExceptions()
@@ -128,15 +139,45 @@ namespace Websocket.Client.Tests
 
             foreach (var client in clients)
             {
+                await client.Start();
                 client.Send("ping");
             }
 
-            await Task.Delay(2000);
+            await Task.Delay(200);
 
             foreach (var client in clients)
             {
                 client.Dispose();
             }
+        }
+
+        [Fact]
+        public async Task Starting_WithServerDelay_RetriesAfterConnectionTimeout()
+        {
+            var attempt = 1;
+
+            using var client = _context.CreateClient(() => attempt++ == 1 ? 300 : 0);
+            client.ConnectTimeout = TimeSpan.FromMilliseconds(200);
+            client.ErrorReconnectTimeout = TimeSpan.FromMilliseconds(200);
+            client.ReconnectTimeout = null;
+            client.IsReconnectionEnabled = false;
+
+            var receivedCount = 0;
+            var receivedEvent = new ManualResetEvent(false);
+
+            client.MessageReceived
+                .Where(x => x.MessageType == WebSocketMessageType.Text)
+                .Subscribe(msg =>
+                {
+                    receivedCount++;
+                    receivedEvent.Set();
+                });
+
+            await client.Start();
+
+            receivedEvent.WaitOne(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
+
+            Assert.Equal(1, receivedCount);
         }
 
         [Fact]
@@ -146,7 +187,7 @@ namespace Websocket.Client.Tests
 
             using (var client = _context.CreateClient())
             {
-                client.ReconnectTimeout = TimeSpan.FromSeconds(7);
+                client.ReconnectTimeout = null;
 
                 string received = null;
                 var receivedCount = 0;
@@ -178,10 +219,8 @@ namespace Websocket.Client.Tests
                     receivedEvent.Set();
                 });
 
-                receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+                receivedEvent.WaitOne(TimeSpan.FromSeconds(Debugger.IsAttached ? 30 : 3));
 
-                // check that reconnection is disabled
-                await Task.Delay(8000);
                 Assert.Equal(1, receivedCount);
                 Assert.Equal(1, disconnectionCount);
                 Assert.Equal(DisconnectionType.ByUser, disconnectionInfo.Type);
@@ -201,11 +240,10 @@ namespace Websocket.Client.Tests
         {
             using var client = _context.CreateClient();
             client.IsReconnectionEnabled = false;
-            client.ReconnectTimeout = TimeSpan.FromSeconds(7);
+            client.ReconnectTimeout = null;
 
             string received = null;
             var receivedCount = 0;
-            var receivedEvent = new ManualResetEvent(false);
             var disconnectionCount = 0;
             DisconnectionInfo disconnectionInfo = null;
 
@@ -230,15 +268,12 @@ namespace Websocket.Client.Tests
             {
                 await Task.Delay(200);
                 client.Send("close-me");
-                receivedEvent.Set();
             });
 
-            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            await WaitUntil(() => !client.IsStarted);
 
-            // check that reconnection is disabled
-            await Task.Delay(8000);
             Assert.Equal(1, receivedCount);
-            Assert.InRange(disconnectionCount, 1, 2);
+            Assert.Equal(1, disconnectionCount);
             Assert.Equal(DisconnectionType.ByServer, disconnectionInfo.Type);
             Assert.Equal(WebSocketCloseStatus.NormalClosure, disconnectionInfo.CloseStatus);
             Assert.Equal("normal closure", disconnectionInfo.CloseStatusDescription);
@@ -251,11 +286,10 @@ namespace Websocket.Client.Tests
         {
             using var client = _context.CreateClient();
             client.IsReconnectionEnabled = true;
-            client.ReconnectTimeout = TimeSpan.FromSeconds(30);
+            client.ReconnectTimeout = null;
 
             string received = null;
             var receivedCount = 0;
-            var receivedEvent = new ManualResetEvent(false);
             var disconnectionCount = 0;
             DisconnectionInfo disconnectionInfo = null;
 
@@ -280,16 +314,13 @@ namespace Websocket.Client.Tests
             {
                 await Task.Delay(200);
                 client.Send("close-me");
-                receivedEvent.Set();
             });
 
-            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            await WaitUntil(() => receivedCount == 2);
 
-            // check that reconnection is disabled
-            await Task.Delay(8000);
             Assert.Equal(2, receivedCount);
-            Assert.InRange(disconnectionCount, 1, 2);
-            Assert.Equal(DisconnectionType.Lost, disconnectionInfo.Type);
+            Assert.Equal(1, disconnectionCount);
+            Assert.Equal(DisconnectionType.ByServer, disconnectionInfo.Type);
             Assert.Equal(WebSocketCloseStatus.NormalClosure, disconnectionInfo.CloseStatus);
             Assert.Equal("normal closure", disconnectionInfo.CloseStatusDescription);
             Assert.True(client.IsRunning);
@@ -300,12 +331,11 @@ namespace Websocket.Client.Tests
         public async Task Stopping_ByServer_CancelNoReconnect_ShouldNotFinishClosing()
         {
             using var client = _context.CreateClient();
-            client.ReconnectTimeout = TimeSpan.FromSeconds(7);
+            client.ReconnectTimeout = null;
             client.IsReconnectionEnabled = false;
 
             string received = null;
             var receivedCount = 0;
-            var receivedEvent = new ManualResetEvent(false);
             var disconnectionCount = 0;
             DisconnectionInfo disconnectionInfo = null;
 
@@ -331,16 +361,13 @@ namespace Websocket.Client.Tests
             {
                 await Task.Delay(200);
                 client.Send("close-me");
-                receivedEvent.Set();
             });
 
-            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            await WaitUntil(() => !client.IsStarted);
 
-            // check that reconnection is disabled
-            await Task.Delay(8000);
             Assert.Equal(1, receivedCount);
-            Assert.InRange(disconnectionCount, 1, 2);
-            Assert.Equal(DisconnectionType.Lost, disconnectionInfo.Type);
+            Assert.Equal(1, disconnectionCount);
+            Assert.Equal(DisconnectionType.ByServer, disconnectionInfo.Type);
             Assert.Equal(WebSocketCloseStatus.NormalClosure, disconnectionInfo.CloseStatus);
             Assert.Equal("normal closure", disconnectionInfo.CloseStatusDescription);
             Assert.False(client.IsRunning);
@@ -351,12 +378,11 @@ namespace Websocket.Client.Tests
         public async Task Stopping_ByServer_CancelWithReconnect_ShouldNotFinishClosing()
         {
             using var client = _context.CreateClient();
-            client.ReconnectTimeout = TimeSpan.FromSeconds(30);
+            client.ReconnectTimeout = null;
             client.IsReconnectionEnabled = true;
 
             string received = null;
             var receivedCount = 0;
-            var receivedEvent = new ManualResetEvent(false);
             var disconnectionCount = 0;
             DisconnectionInfo disconnectionInfo = null;
 
@@ -382,16 +408,13 @@ namespace Websocket.Client.Tests
             {
                 await Task.Delay(200);
                 client.Send("close-me");
-                receivedEvent.Set();
             });
 
-            receivedEvent.WaitOne(TimeSpan.FromSeconds(30));
+            await WaitUntil(() => receivedCount == 2);
 
-            // check that reconnection is disabled
-            await Task.Delay(8000);
             Assert.Equal(2, receivedCount);
-            Assert.InRange(disconnectionCount, 1, 2);
-            Assert.Equal(DisconnectionType.Lost, disconnectionInfo.Type);
+            Assert.Equal(1, disconnectionCount);
+            Assert.Equal(DisconnectionType.ByServer, disconnectionInfo.Type);
             Assert.Equal(WebSocketCloseStatus.NormalClosure, disconnectionInfo.CloseStatus);
             Assert.Equal("normal closure", disconnectionInfo.CloseStatusDescription);
             Assert.True(client.IsRunning);
@@ -406,7 +429,7 @@ namespace Websocket.Client.Tests
             using var client = _context.CreateClient();
             // independently of this config, if it is a normal expected closure by User, it shouldn't reconnect
             client.IsReconnectionEnabled = reconnectionEnabled;
-            client.ReconnectTimeout = TimeSpan.FromSeconds(7);
+            client.ReconnectTimeout = TimeSpan.FromMilliseconds(200);
 
             var reconnectionCount = 0;
             var disconnectionCount = 0;
@@ -434,7 +457,7 @@ namespace Websocket.Client.Tests
             await client.Stop(WebSocketCloseStatus.NormalClosure, "Expected Closure");
 
             // give some time to receive disconnection and reconnection messages
-            await Task.Delay(8000);
+            await Task.Delay(300);
 
             Assert.Equal(1, disconnectionCount);
             Assert.Equal(0, reconnectionCount);
@@ -510,7 +533,7 @@ namespace Websocket.Client.Tests
         public async Task Stopping_InvalidServer_ShouldStopReconnection()
         {
             using var client = _context.CreateInvalidClient(new Uri("wss://google.com"));
-            client.ErrorReconnectTimeout = TimeSpan.FromSeconds(4);
+            client.ErrorReconnectTimeout = TimeSpan.FromMilliseconds(400);
 
             string received = null;
             var receivedCount = 0;
@@ -533,12 +556,12 @@ namespace Websocket.Client.Tests
             });
 
             _ = client.Start();
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
 
             Assert.True(client.IsStarted, "IsStarted should be true");
             await client.Stop(WebSocketCloseStatus.NormalClosure, string.Empty);
 
-            await Task.Delay(TimeSpan.FromSeconds(6));
+            await Task.Delay(TimeSpan.FromMilliseconds(600));
 
             Assert.False(client.IsRunning, "IsRunning is true and shouldn't");
             Assert.False(client.IsStarted, "IsStarted is true and shouldn't");
@@ -554,7 +577,8 @@ namespace Websocket.Client.Tests
         public async Task Stopping_AfterChangingToInvalidServer_ShouldStopReconnection()
         {
             using var client = _context.CreateClient();
-            client.ErrorReconnectTimeout = TimeSpan.FromSeconds(4);
+            client.ReconnectTimeout = null;
+            client.ErrorReconnectTimeout = TimeSpan.FromMilliseconds(200);
 
             string received = null;
             var receivedCount = 0;
@@ -577,20 +601,20 @@ namespace Websocket.Client.Tests
             });
 
             _ = client.Start();
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
 
             Assert.True(client.IsStarted, "IsStarted should be true");
             await client.Stop(WebSocketCloseStatus.NormalClosure, string.Empty);
-            await Task.Delay(TimeSpan.FromSeconds(6));
+            await Task.Delay(TimeSpan.FromMilliseconds(200));
             Assert.False(client.IsRunning, "IsRunning should be false");
 
             client.Url = _context.InvalidUri;
             _ = client.Start();
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
 
             Assert.True(client.IsStarted, "IsStarted should be true");
             await client.Stop(WebSocketCloseStatus.NormalClosure, string.Empty);
-            await Task.Delay(TimeSpan.FromSeconds(6));
+            await Task.Delay(TimeSpan.FromMilliseconds(200));
 
             Assert.False(client.IsRunning, "IsRunning is true and shouldn't");
             Assert.False(client.IsStarted, "IsStarted is true and shouldn't");

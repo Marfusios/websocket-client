@@ -24,6 +24,12 @@ namespace Websocket.Client
 
         private static readonly byte[] _emptyArray = { };
 
+        /// <inheritdoc />
+        public bool TextSenderRunning { get; private set; }
+
+        /// <inheritdoc />
+        public bool BinarySenderRunning { get; private set; }
+
         /// <summary>
         /// Send text message to the websocket channel. 
         /// It inserts the message to the queue and actual sending is done on another thread
@@ -159,6 +165,7 @@ namespace Websocket.Client
 
         private async Task SendTextFromQueue()
         {
+            TextSenderRunning = true;
             try
             {
                 while (await _messagesTextToSendQueue.Reader.WaitToReadAsync())
@@ -176,30 +183,35 @@ namespace Websocket.Client
                     }
                 }
             }
-            catch (TaskCanceledException)
+            catch (TaskCanceledException e)
             {
                 // task was canceled, ignore
+                _logger.LogDebug(e, L("Sending text thread failed, error: {error}. Shutting down."), Name, e.Message);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e)
             {
                 // operation was canceled, ignore
+                _logger.LogDebug(e, L("Sending text thread failed, error: {error}. Shutting down."), Name, e.Message);
             }
             catch (Exception e)
             {
                 if (_cancellationTotal?.IsCancellationRequested == true || _disposing)
                 {
                     // disposing/canceling, do nothing and exit
+                    _logger.LogDebug(e, L("Sending text thread failed, error: {error}. Shutting down."), Name, e.Message);
+                    TextSenderRunning = false;
                     return;
                 }
 
-                _logger.LogTrace(L("Sending text thread failed, error: {error}. Creating a new sending thread."), Name, e.Message);
+                _logger.LogDebug(e, L("Sending text thread failed, error: {error}. Creating a new sending thread."), Name, e.Message);
                 StartBackgroundThreadForSendingText();
             }
-
+            TextSenderRunning = false;
         }
 
         private async Task SendBinaryFromQueue()
         {
+            BinarySenderRunning = true;
             try
             {
                 while (await _messagesBinaryToSendQueue.Reader.WaitToReadAsync())
@@ -217,26 +229,30 @@ namespace Websocket.Client
                     }
                 }
             }
-            catch (TaskCanceledException)
+            catch (TaskCanceledException e)
             {
                 // task was canceled, ignore
+                _logger.LogDebug(e, L("Sending binary thread failed, error: {error}. Shutting down."), Name, e.Message);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e)
             {
                 // operation was canceled, ignore
+                _logger.LogDebug(e, L("Sending binary thread failed, error: {error}. Shutting down."), Name, e.Message);
             }
             catch (Exception e)
             {
                 if (_cancellationTotal?.IsCancellationRequested == true || _disposing)
                 {
                     // disposing/canceling, do nothing and exit
+                    _logger.LogDebug(e, L("Sending binary thread failed, error: {error}. Shutting down."), Name, e.Message);
+                    BinarySenderRunning = false;
                     return;
                 }
 
-                _logger.LogTrace(L("Sending binary thread failed, error: {error}. Creating a new sending thread."), Name, e.Message);
+                _logger.LogDebug(e, L("Sending binary thread failed, error: {error}. Creating a new sending thread."), Name, e.Message);
                 StartBackgroundThreadForSendingBinary();
             }
-
+            BinarySenderRunning = false;
         }
 
         private void StartBackgroundThreadForSendingText()

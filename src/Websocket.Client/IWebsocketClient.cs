@@ -117,6 +117,12 @@ namespace Websocket.Client
         IObservable<DisconnectionInfo> DisconnectionHappened { get; }
 
         /// <summary>
+        /// Time range for how long to wait while connecting a new client.
+        /// Default: 2 seconds
+        /// </summary>
+        TimeSpan ConnectTimeout { get; set; }
+
+        /// <summary>
         /// Time range for how long to wait before reconnecting if no message comes from server.
         /// Set null to disable this feature. 
         /// Default: 1 minute
@@ -157,6 +163,21 @@ namespace Websocket.Client
         /// Returns true if client is running and connected to the server
         /// </summary>
         bool IsRunning { get; }
+
+        /// <summary>
+        /// Returns whether text message sender is running.
+        /// </summary>
+        bool TextSenderRunning { get; }
+
+        /// <summary>
+        /// Returns whether the binary message sender is running.
+        /// </summary>
+        bool BinarySenderRunning { get; }
+
+        /// <summary>
+        /// Indicates whether any thread has entered the lock.
+        /// </summary>
+        bool IsInsideLock { get; }
 
         /// <summary>
         /// Enable or disable text message conversion from binary to string (via 'MessageEncoding' property).

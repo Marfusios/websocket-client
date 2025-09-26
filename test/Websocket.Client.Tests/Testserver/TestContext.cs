@@ -25,13 +25,13 @@ namespace Websocket.Client.Tests.TestServer
 
         public Uri InvalidUri { get; } = new("wss://invalid-url.local");
 
-        public IWebsocketClient CreateClient()
+        public IWebsocketClient CreateClient(Func<int> getDelayMilliseconds = null)
         {
             var httpClient = _factory.CreateClient(); // This is needed since _factory.Server would otherwise be null
-            return CreateClient(_factory.Server.BaseAddress);
+            return CreateClient(_factory.Server.BaseAddress, getDelayMilliseconds ?? (() => 0));
         }
 
-        public IWebsocketClient CreateClient(Uri serverUrl)
+        private IWebsocketClient CreateClient(Uri serverUrl, Func<int> getDelayMilliseconds)
         {
             var wsUri = new UriBuilder(serverUrl)
             {
@@ -51,9 +51,15 @@ namespace Websocket.Client.Tests.TestServer
                         throw new InvalidOperationException("Connection to websocket server failed, check url");
                     }
 
+                    var delayMilliseconds = getDelayMilliseconds();
+                    if (delayMilliseconds > 0)
+                        uri = new UriBuilder(uri)
+                        {
+                            Query = $"delay={delayMilliseconds}"
+                        }.Uri;
+
                     NativeTestClient = _factory.Server.CreateWebSocketClient();
                     var ws = await NativeTestClient.ConnectAsync(uri, token).ConfigureAwait(false);
-                    //await Task.Delay(1000, token);
                     return ws;
                 });
         }

@@ -118,7 +118,7 @@ namespace Websocket.Client
 
         /// <summary>
         /// Time range for how long to wait while connecting a new client.
-        /// Default: 2 seconds
+        /// Default: 5 seconds
         /// </summary>
         TimeSpan ConnectTimeout { get; set; }
 

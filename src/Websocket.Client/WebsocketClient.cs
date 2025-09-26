@@ -126,9 +126,9 @@ namespace Websocket.Client
 
         /// <summary>
         /// Time range for how long to wait while connecting a new client.
-        /// Default: 2 seconds
+        /// Default: 5 seconds
         /// </summary>
-        public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(2);
+        public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
         /// Time range for how long to wait before reconnecting if no message comes from server.
@@ -196,7 +196,7 @@ namespace Websocket.Client
         /// Default: true
         /// </summary>
         public bool IsTextMessageConversionEnabled { get; set; } = true;
-        
+
         /// <inheritdoc />
         public bool IsInsideLock => _locker.IsLocked;
 

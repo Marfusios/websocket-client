@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IO;
 using System;
+using System.Buffers;
 using System.IO;
 using System.Net.WebSockets;
 using System.Reactive.Linq;
@@ -483,30 +484,29 @@ namespace Websocket.Client
             {
                 // define buffer here and reuse, to avoid more allocation
                 const int chunkSize = 1024 * 4;
-                var buffer = new Memory<byte>(new byte[chunkSize]);
+                // allocate bigger buffer (16kb) to avoid resizing in case of big messages
+                var arrayBufferWriter = new ArrayBufferWriter<byte>(chunkSize * 4);
 
                 do
                 {
                     ValueWebSocketReceiveResult result;
-                    var ms = MemoryStreamManager.GetStream();
 
                     while (true)
                     {
+                        var buffer = arrayBufferWriter.GetMemory(chunkSize);
                         result = await client.ReceiveAsync(buffer, token);
-                        ms.Write(buffer[..result.Count].Span);
+
+                        arrayBufferWriter.Advance(result.Count);
 
                         if (result.EndOfMessage)
                             break;
                     }
 
-                    ms.Seek(0, SeekOrigin.Begin);
-
                     ResponseMessage message;
-                    bool shouldDisposeStream = true;
 
                     if (result.MessageType == WebSocketMessageType.Text && IsTextMessageConversionEnabled)
                     {
-                        var data = GetEncoding().GetString(ms.GetBuffer(), 0, (int)ms.Length);
+                        var data = GetEncoding().GetString(arrayBufferWriter.WrittenSpan);
                         message = ResponseMessage.TextMessage(data);
                     }
                     else if (result.MessageType == WebSocketMessageType.Close)
@@ -546,17 +546,17 @@ namespace Websocket.Client
                     {
                         if (IsStreamDisposedAutomatically)
                         {
-                            message = ResponseMessage.BinaryMessage(ms.ToArray());
+                            message = ResponseMessage.BinaryMessage(arrayBufferWriter.WrittenSpan.ToArray());
                         }
                         else
                         {
-                            message = ResponseMessage.BinaryStreamMessage(ms);
-                            shouldDisposeStream = false;
+                            var stream = MemoryStreamManager.GetStream(arrayBufferWriter.WrittenSpan);
+                            message = ResponseMessage.BinaryStreamMessage(stream);
                         }
                     }
 
-                    if (shouldDisposeStream)
-                        ms.Dispose();
+                    // clear buffer for next message
+                    arrayBufferWriter.Clear();
 
                     _logger.LogTrace(L("Received:  {message}"), Name, message);
                     _lastReceivedMsg = DateTime.UtcNow;

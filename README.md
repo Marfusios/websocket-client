@@ -15,7 +15,8 @@ This is a wrapper over native C# class `ClientWebSocket` with built-in reconnect
 ### Features
 
 * installation via NuGet ([Websocket.Client](https://www.nuget.org/packages/Websocket.Client))
-* targeting .NET Standard 2.1, .NET 6, .NET 7, .NET 8, .NET 9, and .NET 10
+* targeting .NET Standard 2.0, .NET Standard 2.1, .NET 6, .NET 7, .NET 8, .NET 9, and .NET 10
+* full .NET Framework support through the .NET Standard 2.0 asset; the included framework sample targets .NET Framework 4.7.2 on Windows
 * reactive extensions ([Rx.NET](https://github.com/Reactive-Extensions/Rx.NET))
 * integrated logging abstraction (`Microsoft.Extensions.Logging`)
 * using Channels for high performance sending queue
@@ -43,6 +44,7 @@ Representative BenchmarkDotNet results show meaningful improvements on typical s
 * disabled trace logging: `28.72 ns / 64 B` to approximately `0 ns / 0 B`
 * queued text request envelope: `31.54 ns / 24 B` to `29.65 ns / 0 B`
 * stream-backed binary `ResponseMessage.ToString()` at 32 KB: `1.149 us / 32872 B` to `44.60 ns / 104 B`
+* .NET Framework 4.8.1 client receive path, via the `netstandard2.0` asset: 1000 x 1024 B text messages in `1.062 ms / 2312.21 KB`
 
 For very large text messages, the resulting `string` allocation dominates the receive cost, so the library focuses on avoiding unnecessary intermediate allocations and avoiding retention of oversized receive buffers after traffic spikes.
 

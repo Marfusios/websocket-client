@@ -55,8 +55,26 @@ public class ClientReceiveBenchmarks
 
         await client.Start().ConfigureAwait(false);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+#if NET472
+        return await WaitAsync(completion.Task, timeout.Token).ConfigureAwait(false);
+#else
         return await completion.Task.WaitAsync(timeout.Token).ConfigureAwait(false);
+#endif
     }
+
+#if NET472
+    private static async Task<T> WaitAsync<T>(Task<T> task, CancellationToken cancellationToken)
+    {
+        var cancellationTask = Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        var completedTask = await Task.WhenAny(task, cancellationTask).ConfigureAwait(false);
+
+        if (completedTask == task)
+            return await task.ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        throw new TimeoutException("The benchmark operation timed out.");
+    }
+#endif
 
     private sealed class ScriptedTextWebSocket : WebSocket
     {
@@ -109,10 +127,15 @@ public class ClientReceiveBenchmarks
 
         public override async Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken)
         {
+#if NET472
+            return await ReceiveSegmentAsync(buffer, cancellationToken).ConfigureAwait(false);
+#else
             var result = await ReceiveAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
             return new WebSocketReceiveResult(result.Count, result.MessageType, result.EndOfMessage);
+#endif
         }
 
+#if !NET472
         public override ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken)
         {
             if (_messageIndex >= _messages.Length)
@@ -141,16 +164,51 @@ public class ClientReceiveBenchmarks
 
             return ValueTask.FromResult(new ValueWebSocketReceiveResult(count, WebSocketMessageType.Text, endOfMessage));
         }
+#endif
 
         public override Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
+#if NET472
+        private async Task<WebSocketReceiveResult> ReceiveSegmentAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken)
+        {
+            if (_messageIndex >= _messages.Length)
+            {
+                if (_closeReturned)
+                {
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+                    return new WebSocketReceiveResult(0, WebSocketMessageType.Close, true);
+                }
+
+                _closeReturned = true;
+                _state = WebSocketState.CloseReceived;
+                _closeStatus = WebSocketCloseStatus.NormalClosure;
+                _closeStatusDescription = "Benchmark complete";
+                return new WebSocketReceiveResult(0, WebSocketMessageType.Close, true);
+            }
+
+            var message = _messages[_messageIndex];
+            var count = Math.Min(buffer.Count, message.Length - _messageOffset);
+            Buffer.BlockCopy(message, _messageOffset, buffer.Array!, buffer.Offset, count);
+            _messageOffset += count;
+
+            var endOfMessage = _messageOffset == message.Length;
+            if (endOfMessage)
+            {
+                _messageIndex++;
+                _messageOffset = 0;
+            }
+
+            return new WebSocketReceiveResult(count, WebSocketMessageType.Text, endOfMessage);
+        }
+#else
         private static async ValueTask<ValueWebSocketReceiveResult> WaitForCancellation(CancellationToken cancellationToken)
         {
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
             return new ValueWebSocketReceiveResult(0, WebSocketMessageType.Close, true);
         }
+#endif
     }
 }

@@ -25,6 +25,8 @@ namespace Websocket.Client
 
         public ReadOnlySpan<byte> WrittenSpan => _buffer.AsSpan(0, _written);
 
+        public ArraySegment<byte> WrittenSegment => new ArraySegment<byte>(_buffer, 0, _written);
+
         public int Capacity => _buffer.Length;
 
         public void Advance(int count)
@@ -48,6 +50,12 @@ namespace Websocket.Client
         {
             Ensure(sizeHint);
             return _buffer.AsSpan(_written);
+        }
+
+        public ArraySegment<byte> GetSegment(int sizeHint = 0)
+        {
+            Ensure(sizeHint);
+            return new ArraySegment<byte>(_buffer, _written, _buffer.Length - _written);
         }
 
         public void Clear()

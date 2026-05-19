@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11811.120 insiders
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{360B18BD-653A-4824-9261-C88167EEBAD2}"
 EndProject
@@ -32,6 +32,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", "{66320409-64EC-F7C5-3DEF-65E7510DAAD1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Websocket.Client.Benchmarks", "benchmarks\Websocket.Client.Benchmarks\Websocket.Client.Benchmarks.csproj", "{4A962092-136C-489E-A1A7-B40D8506E048}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Websocket.Client.Sample.NetFramework", "test_integration\Websocket.Client.Sample.NetFramework\Websocket.Client.Sample.NetFramework.csproj", "{8742C4B4-85C3-F5D6-4391-68397361775F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -115,6 +117,18 @@ Global
 		{4A962092-136C-489E-A1A7-B40D8506E048}.Release|x64.Build.0 = Release|Any CPU
 		{4A962092-136C-489E-A1A7-B40D8506E048}.Release|x86.ActiveCfg = Release|Any CPU
 		{4A962092-136C-489E-A1A7-B40D8506E048}.Release|x86.Build.0 = Release|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Debug|x64.Build.0 = Debug|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Debug|x86.Build.0 = Debug|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Release|x64.ActiveCfg = Release|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Release|x64.Build.0 = Release|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Release|x86.ActiveCfg = Release|Any CPU
+		{8742C4B4-85C3-F5D6-4391-68397361775F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -126,6 +140,7 @@ Global
 		{085B9246-446B-4F61-A6EF-0D8949CA546D} = {42E4078C-4FBE-4B03-B889-1573332945A9}
 		{AFAC261C-E5B5-4558-A869-6AEF5F439060} = {42E4078C-4FBE-4B03-B889-1573332945A9}
 		{4A962092-136C-489E-A1A7-B40D8506E048} = {66320409-64EC-F7C5-3DEF-65E7510DAAD1}
+		{8742C4B4-85C3-F5D6-4391-68397361775F} = {42E4078C-4FBE-4B03-B889-1573332945A9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EE3E0B94-CF20-4C22-B50B-E720E8DFD675}

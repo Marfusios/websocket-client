@@ -15,7 +15,7 @@ namespace Websocket.Client.Sample
 {
     internal class Program
     {
-        private static readonly ManualResetEvent ExitEvent = new(false);
+        private static readonly ManualResetEvent _exitEvent = new(false);
 
         private static void Main()
         {
@@ -76,7 +76,7 @@ namespace Websocket.Client.Sample
                 Task.Run(() => StartSendingPing(client));
                 Task.Run(() => SwitchUrl(client));
 
-                ExitEvent.WaitOne();
+                _exitEvent.WaitOne();
             }
 
             Log.Debug("====================================");
@@ -131,20 +131,20 @@ namespace Websocket.Client.Sample
         private static void CurrentDomainOnProcessExit(object sender, EventArgs eventArgs)
         {
             Log.Warning("Exiting process");
-            ExitEvent.Set();
+            _exitEvent.Set();
         }
 
         private static void DefaultOnUnloading(AssemblyLoadContext assemblyLoadContext)
         {
             Log.Warning("Unloading process");
-            ExitEvent.Set();
+            _exitEvent.Set();
         }
 
         private static void ConsoleOnCancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             Log.Warning("Canceling process");
             e.Cancel = true;
-            ExitEvent.Set();
+            _exitEvent.Set();
         }
     }
 }

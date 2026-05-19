@@ -8,11 +8,11 @@ using Serilog.Events;
 
 namespace Websocket.Client.Sample.NetFramework
 {
-    class Program
+    internal class Program
     {
-        private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(false);
+        private static readonly ManualResetEvent _exitEvent = new ManualResetEvent(false);
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             InitLogging();
 
@@ -34,7 +34,7 @@ namespace Websocket.Client.Sample.NetFramework
             using (var client = new WebsocketClient(url))
             {
                 client.Name = "Bitmex";
-                client.ReconnectTimeoutMs = (int)TimeSpan.FromSeconds(30).TotalMilliseconds;
+                client.ReconnectTimeout = TimeSpan.FromSeconds(30);
                 client.ReconnectionHappened.Subscribe(type =>
                     Log.Information($"Reconnection happened, type: {type}"));
                 client.DisconnectionHappened.Subscribe(type => 
@@ -46,7 +46,7 @@ namespace Websocket.Client.Sample.NetFramework
 
                 Task.Run(() => StartSendingPing(client));
 
-                ExitEvent.WaitOne();
+                _exitEvent.WaitOne();
             }
 
             Log.Debug("====================================");
@@ -60,7 +60,7 @@ namespace Websocket.Client.Sample.NetFramework
             while (true)
             {
                 await Task.Delay(1000);
-                await client.Send("ping");
+                client.Send("ping");
             }
         }
 
@@ -71,21 +71,21 @@ namespace Websocket.Client.Sample.NetFramework
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()
                 .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-                .WriteTo.ColoredConsole(LogEventLevel.Verbose)
+                .WriteTo.Console(LogEventLevel.Verbose)
                 .CreateLogger();
         }
 
         private static void CurrentDomainOnProcessExit(object sender, EventArgs eventArgs)
         {
             Log.Warning("Exiting process");
-            ExitEvent.Set();
+            _exitEvent.Set();
         }
 
         private static void ConsoleOnCancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             Log.Warning("Canceling process");
             e.Cancel = true;
-            ExitEvent.Set();
+            _exitEvent.Set();
         }
     }
 }

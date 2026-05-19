@@ -2,6 +2,9 @@
 using System;
 using System.Buffers;
 using System.Net.WebSockets;
+#if NETSTANDARD2_0
+using System.Runtime.InteropServices;
+#endif
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -359,25 +362,39 @@ namespace Websocket.Client
             var segments = payload.GetEnumerator();
             if (!segments.MoveNext())
             {
+#if NETSTANDARD2_0
+                await client
+                    .SendAsync(new ArraySegment<byte>(_emptyArray), messageType, true, cancellationToken)
+                    .ConfigureAwait(false);
+#else
                 await client
                     .SendAsync(_emptyArray, messageType, true, cancellationToken)
                     .ConfigureAwait(false);
+#endif
                 return;
             }
 
             var current = segments.Current;
             while (segments.MoveNext())
             {
+#if NETSTANDARD2_0
+                await SendAsync(client, current, messageType, false, cancellationToken).ConfigureAwait(false);
+#else
                 await client
                     .SendAsync(current, messageType, false, cancellationToken)
                     .ConfigureAwait(false);
+#endif
 
                 current = segments.Current;
             }
 
+#if NETSTANDARD2_0
+            await SendAsync(client, current, messageType, true, cancellationToken).ConfigureAwait(false);
+#else
             await client
                 .SendAsync(current, messageType, true, cancellationToken)
                 .ConfigureAwait(false);
+#endif
         }
 
         private async Task SendInternal(ReadOnlyMemory<byte> payload, WebSocketMessageType messageType)
@@ -390,10 +407,28 @@ namespace Websocket.Client
             var client = _client!;
             var cancellationToken = _cancellation?.Token ?? CancellationToken.None;
 
+#if NETSTANDARD2_0
+            await SendAsync(client, payload, messageType, true, cancellationToken).ConfigureAwait(false);
+#else
             await client
                 .SendAsync(payload, messageType, true, cancellationToken)
                 .ConfigureAwait(false);
+#endif
         }
+
+#if NETSTANDARD2_0
+        private static Task SendAsync(WebSocket client, ReadOnlyMemory<byte> payload,
+            WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
+        {
+            if (MemoryMarshal.TryGetArray(payload, out var segment))
+            {
+                return client.SendAsync(segment, messageType, endOfMessage, cancellationToken);
+            }
+
+            var buffer = payload.ToArray();
+            return client.SendAsync(new ArraySegment<byte>(buffer), messageType, endOfMessage, cancellationToken);
+        }
+#endif
 
         private bool CheckClientConnection(long length)
         {

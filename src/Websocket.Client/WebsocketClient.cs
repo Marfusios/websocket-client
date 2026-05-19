@@ -496,12 +496,21 @@ namespace Websocket.Client
                 {
                     try
                     {
+#if NETSTANDARD2_0
+                        WebSocketReceiveResult result;
+#else
                         ValueWebSocketReceiveResult result;
+#endif
 
                         while (true)
                         {
+#if NETSTANDARD2_0
+                            var buffer = receiveBuffer.GetSegment(chunkSize);
+                            result = await client.ReceiveAsync(buffer, token).ConfigureAwait(false);
+#else
                             var buffer = receiveBuffer.GetMemory(chunkSize);
-                            result = await client.ReceiveAsync(buffer, token);
+                            result = await client.ReceiveAsync(buffer, token).ConfigureAwait(false);
+#endif
 
                             receiveBuffer.Advance(result.Count);
 
@@ -513,7 +522,12 @@ namespace Websocket.Client
 
                         if (result.MessageType == WebSocketMessageType.Text && IsTextMessageConversionEnabled)
                         {
+#if NETSTANDARD2_0
+                            var segment = receiveBuffer.WrittenSegment;
+                            var data = GetEncoding().GetString(segment.Array!, segment.Offset, segment.Count);
+#else
                             var data = GetEncoding().GetString(receiveBuffer.WrittenSpan);
+#endif
                             message = ResponseMessage.TextMessage(data);
                         }
                         else if (result.MessageType == WebSocketMessageType.Close)

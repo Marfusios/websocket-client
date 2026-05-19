@@ -5,6 +5,7 @@ using Microsoft.IO;
 
 namespace Websocket.Client.Benchmarks;
 
+#if !NET472
 [MemoryDiagnoser]
 [ShortRunJob]
 [RankColumn]
@@ -97,3 +98,4 @@ public class ReceiveBufferBenchmarks
         }
     }
 }
+#endif

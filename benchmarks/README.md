@@ -2,29 +2,37 @@
 
 This folder contains BenchmarkDotNet benchmarks for allocation-sensitive Websocket.Client hot paths.
 
-The latest representative run below was captured on Windows 11, AMD Ryzen 9 3900X, .NET SDK 10.0.201, running the benchmarks on .NET 10.0.5 with BenchmarkDotNet `ShortRun`.
+The representative .NET 10 results below were captured on Windows 11, AMD Ryzen 9 3900X, .NET SDK 10.0.201, running the benchmarks on .NET 10.0.5 with BenchmarkDotNet `ShortRun`.
 
-Run all benchmarks:
+The .NET Framework results were captured on the same machine with .NET SDK 10.0.300, BenchmarkDotNet 0.15.8, and .NET Framework 4.8.1 through the benchmark project's `net472` target.
+
+Run all .NET 10 benchmarks:
 
 ```powershell
-dotnet run --configuration Release --project benchmarks\Websocket.Client.Benchmarks -- --filter "*"
+dotnet run --configuration Release --framework net10.0 --project benchmarks\Websocket.Client.Benchmarks -- --filter "*"
 ```
 
-Run the most relevant receive/send benchmarks:
+Run the most relevant .NET 10 receive/send benchmarks:
 
 ```powershell
-dotnet run --configuration Release --project benchmarks\Websocket.Client.Benchmarks -- --filter "*ReceiveBufferBenchmarks*"
-dotnet run --configuration Release --project benchmarks\Websocket.Client.Benchmarks -- --filter "*TextSendEncodingBenchmarks*"
-dotnet run --configuration Release --project benchmarks\Websocket.Client.Benchmarks -- --filter "*TraceLoggingBenchmarks*"
-dotnet run --configuration Release --project benchmarks\Websocket.Client.Benchmarks -- --filter "*RequestMessageBenchmarks*"
-dotnet run --configuration Release --project benchmarks\Websocket.Client.Benchmarks -- --filter "*SendSequenceFramingBenchmarks*"
+dotnet run --configuration Release --framework net10.0 --project benchmarks\Websocket.Client.Benchmarks -- --filter "*ReceiveBufferBenchmarks*"
+dotnet run --configuration Release --framework net10.0 --project benchmarks\Websocket.Client.Benchmarks -- --filter "*TextSendEncodingBenchmarks*"
+dotnet run --configuration Release --framework net10.0 --project benchmarks\Websocket.Client.Benchmarks -- --filter "*TraceLoggingBenchmarks*"
+dotnet run --configuration Release --framework net10.0 --project benchmarks\Websocket.Client.Benchmarks -- --filter "*RequestMessageBenchmarks*"
+dotnet run --configuration Release --framework net10.0 --project benchmarks\Websocket.Client.Benchmarks -- --filter "*SendSequenceFramingBenchmarks*"
+```
+
+Run the .NET Framework client receive benchmark on Windows:
+
+```powershell
+dotnet run --configuration Release --framework net472 --project benchmarks\Websocket.Client.Benchmarks -- --filter "*ClientReceiveBenchmarks*"
 ```
 
 Results are written to `BenchmarkDotNet.Artifacts\results`.
 
 ## What The Benchmarks Cover
 
-- `ReceiveBufferBenchmarks` compares the old per-message `RecyclableMemoryStream` receive path, PR #158's `ArrayBufferWriter<byte>` path, and the current pooled receive buffer.
+- `ReceiveBufferBenchmarks` compares the old per-message `RecyclableMemoryStream` receive path, PR #158's `ArrayBufferWriter<byte>` path, and the current pooled receive buffer. This benchmark is .NET 10-only because the comparison uses `ArrayBufferWriter<byte>`.
 - `TextSendEncodingBenchmarks` compares outgoing text encoding through `Encoding.GetBytes(string)` against encoding into an `ArrayPool<byte>` buffer.
 - `ResponseMessageBenchmarks` measures the `ResponseMessage.ToString()` stream-copy fix.
 - `ObservablePropertyBenchmarks` measures cached observable properties versus creating an `AsObservable()` wrapper on every access.
@@ -109,9 +117,22 @@ Use the Ratio and Allocated columns for the quick answer. Values below 1.00 in R
 
 `ClientReceiveBenchmarks` measures the current public `WebsocketClient` receive flow using an in-memory scripted `WebSocket`. It is not a before/after benchmark; it is a package-level smoke benchmark for the real client path.
 
+#### .NET 10.0
+
 | Messages | Message size | Mean | Allocated |
 | ---: | ---: | ---: | ---: |
 | 100 | 64 B | 10.19 us | 25.42 KB |
 | 100 | 1024 B | 25.09 us | 212.93 KB |
 | 1000 | 64 B | 81.07 us | 201.21 KB |
 | 1000 | 1024 B | 215.61 us | 2076.21 KB |
+
+#### .NET Framework 4.8.1
+
+The `net472` benchmark target consumes the library's `netstandard2.0` asset, so this measures the compatibility path used by full .NET Framework applications.
+
+| Messages | Message size | Mean | Allocated |
+| ---: | ---: | ---: | ---: |
+| 100 | 64 B | 63.85 us | 51.31 KB |
+| 100 | 1024 B | 137.56 us | 242.04 KB |
+| 1000 | 64 B | 447.49 us | 421.71 KB |
+| 1000 | 1024 B | 1.062 ms | 2312.21 KB |

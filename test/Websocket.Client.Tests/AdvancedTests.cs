@@ -28,6 +28,7 @@ namespace Websocket.Client.Tests
             string received = null;
             var receivedCount = 0;
             var receivedEvent = new ManualResetEvent(false);
+            var firstMessageReceived = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             client
                 .MessageReceived
@@ -36,12 +37,15 @@ namespace Websocket.Client.Tests
                     _output.WriteLine($"Received: '{msg}'");
                     receivedCount++;
                     received = msg.Text;
+                    firstMessageReceived.TrySetResult(true);
 
                     if (receivedCount >= 3)
                         receivedEvent.Set();
                 });
 
             await client.Start();
+            // Start can complete before the server's greeting reaches the receive loop.
+            await firstMessageReceived.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
             client.StreamFakeMessage(ResponseMessage.TextMessage(null));
             client.StreamFakeMessage(ResponseMessage.TextMessage(myMessage));

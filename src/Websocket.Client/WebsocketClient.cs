@@ -486,6 +486,7 @@ namespace Websocket.Client
         private async Task Listen(WebSocket client, CancellationToken token)
         {
             Exception? causedException = null;
+            var disconnectionAlreadyReported = false;
             try
             {
                 const int chunkSize = 1024 * 4;
@@ -540,6 +541,7 @@ namespace Websocket.Client
                             }
 
                             var info = DisconnectionInfo.Create(DisconnectionType.ByServer, client, null);
+                            disconnectionAlreadyReported = true;
                             _disconnectedSubject.OnNext(info);
 
                             if (info.CancelClosing)
@@ -558,7 +560,7 @@ namespace Websocket.Client
                             // reconnect if enabled
                             if (IsReconnectionEnabled && !ShouldIgnoreReconnection(client))
                             {
-                                _ = ReconnectSynchronized(ReconnectionType.ByServer, false, null);
+                                _ = ReconnectSynchronized(ReconnectionType.ByServer, false, null, disconnectionAlreadyReported);
                             }
 
                             return;
@@ -627,7 +629,7 @@ namespace Websocket.Client
             }
 
             // listening thread is lost, we have to reconnect
-            _ = ReconnectSynchronized(ReconnectionType.Lost, false, causedException);
+            _ = ReconnectSynchronized(ReconnectionType.Lost, false, causedException, disconnectionAlreadyReported);
         }
 
         private bool ShouldIgnoreReconnection(WebSocket client)

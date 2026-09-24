@@ -188,6 +188,7 @@ namespace Websocket.Client.Tests
             var receivedCount = 0;
             var reconnectedCount = 0;
             var lastReconnectionType = ReconnectionType.Initial;
+            var pongReceived = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             client.IsReconnectionEnabled = true;
             client.ReconnectTimeout = null;
@@ -198,6 +199,8 @@ namespace Websocket.Client.Tests
                 {
                     _output.WriteLine($"Received: '{msg}'");
                     receivedCount++;
+                    if (msg.Text == "pong")
+                        pongReceived.TrySetResult(msg.Text);
                 });
 
             client.ReconnectionHappened.Subscribe(x =>
@@ -214,7 +217,7 @@ namespace Websocket.Client.Tests
 
             await Task.Delay(100);
             await client.Reconnect();
-            _ = client.Reconnect();
+            var pendingReconnection = client.Reconnect();
 
             await Task.Delay(100);
             await client.Reconnect();
@@ -226,11 +229,15 @@ namespace Websocket.Client.Tests
             await client.Reconnect();
             await client.ReconnectOrFail();
 
-            await Task.Delay(200);
+            await pendingReconnection;
+            // Rapid reconnects can close intermediate sockets before their greetings are received.
+            // Verify that the final connection can receive messages instead.
+            client.Send("ping");
+            var response = await pongReceived.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
-            _output.WriteLine($"Received message {receivedCount} times and reconnected {receivedCount} times, " +
+            _output.WriteLine($"Received message {receivedCount} times and reconnected {reconnectedCount} times, " +
                               $"last: {lastReconnectionType}");
-            Assert.Equal(10, receivedCount);
+            Assert.Equal("pong", response);
             Assert.Equal(10, reconnectedCount);
             Assert.Equal(ReconnectionType.ByUser, lastReconnectionType);
         }

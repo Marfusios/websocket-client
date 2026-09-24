@@ -6,7 +6,7 @@
 		<Authors>Mariusz Kotas</Authors>
 		<Description>Client for websocket API with built-in reconnection and error handling</Description>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-		<PackageReleaseNotes>Add .NET Standard 2.0 support for full .NET Framework consumers and update the .NET Framework sample.</PackageReleaseNotes>
+		<PackageReleaseNotes>Fix missing disconnection notifications when a WebSocket close frame is rejected. Preserve normal closure and reconnection cancellation behavior.</PackageReleaseNotes>
 		<Copyright>Copyright 2023 Mariusz Kotas. All rights reserved.</Copyright>
 		<PackageTags>websockets websocket client</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>

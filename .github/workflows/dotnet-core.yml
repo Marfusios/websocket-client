@@ -9,6 +9,12 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read   # checkout
+      actions: read    # test reporter
+      checks: write    # test reporter publishes a check run
+      id-token: write  # OIDC token for NuGet Trusted Publishing
+
     steps:
     - uses: actions/checkout@v4
     - name: Setup .NET SDK
@@ -31,8 +37,13 @@ jobs:
         reporter: dotnet-trx
     - name: Pack library project
       run: dotnet pack src/Websocket.Client/Websocket.Client.csproj --no-build --configuration Release --include-symbols -p:SymbolPackageFormat=snupkg -o .
+    - name: NuGet login (OIDC -> temporary API key)
+      uses: NuGet/login@v1
+      id: nuget-login
+      with:
+        user: marfusios
     - name: Publish library (NuGet)
-      run: dotnet nuget push *.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      run: dotnet nuget push *.nupkg --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source "https://api.nuget.org/v3/index.json" --skip-duplicate
     #- name: Publish library (Github)
     #  run: dotnet nuget push *.nupkg --api-key ${{secrets.PUBLISH_TO_GITHUB_TOKEN}} --source "https://nuget.pkg.github.com/marfusios/index.json" --skip-duplicate
 

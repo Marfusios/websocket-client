@@ -47,15 +47,17 @@ namespace Websocket.Client
             }
         }
 
-        private async Task ReconnectSynchronized(ReconnectionType type, bool failFast, Exception? causedException)
+        private async Task ReconnectSynchronized(ReconnectionType type, bool failFast, Exception? causedException,
+            bool disconnectionAlreadyReported = false)
         {
             using (await _locker.LockAsync().ConfigureAwait(false))
             {
-                await Reconnect(type, failFast, causedException).ConfigureAwait(false);
+                await Reconnect(type, failFast, causedException, disconnectionAlreadyReported).ConfigureAwait(false);
             }
         }
 
-        private async Task Reconnect(ReconnectionType type, bool failFast, Exception? causedException)
+        private async Task Reconnect(ReconnectionType type, bool failFast, Exception? causedException,
+            bool disconnectionAlreadyReported = false)
         {
             IsRunning = false;
             if (_disposing || !IsStarted)
@@ -68,7 +70,10 @@ namespace Websocket.Client
 
             var disType = TranslateTypeToDisconnection(type);
             var disInfo = DisconnectionInfo.Create(disType, _client, causedException);
-            if (type != ReconnectionType.Error && _client?.State != WebSocketState.CloseReceived && _client?.State != WebSocketState.Closed)
+            // ReceiveAsync can reject a close frame after the socket has already entered a closed state.
+            if (type != ReconnectionType.Error && !disconnectionAlreadyReported &&
+                (causedException != null ||
+                 (_client?.State != WebSocketState.CloseReceived && _client?.State != WebSocketState.Closed)))
             {
                 _disconnectedSubject.OnNext(disInfo);
                 if (disInfo.CancelReconnection)
